@@ -1,10 +1,10 @@
-package com.nicednb.svr_gate;
+package com.nicednb.svrgate;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class SvrGateApplicationTests {
+class SvrgateApplicationTests {
 
 	@Test
 	void contextLoads() {
