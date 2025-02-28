@@ -1,21 +1,148 @@
 /* style.css */
 
-/* Bootstrap Custom 스타일 및 Reset */
+
+/* 전역(공통) 스타일: 글꼴, 기본 마진/패딩 리셋 등 */
 body {
-    font-family: 'Noto Sans KR', sans-serif;
-    background-color: #f0f2f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    margin: 0;
+  font-family: 'Noto Sans KR', sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
-.login-container {
-    width: 420px;
+/*
+  로그인 페이지 전용 스타일
+  .login-page 클래스를 가진 <body>에서만 적용됨
+*/
+.login-page {
+  background-color: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh; /* 화면 전체 높이 */
 }
 
-/* 로고 영역 스타일 */
+/* 로그인 컨테이너 */
+.login-page .login-container {
+  width: 420px;
+}
+
+/* 로고 영역 */
+.login-page .logo-area {
+  background-color: #002555;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.login-page .logo-area img {
+  max-width: 280px; /* 로고 최대 너비 */
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* 로그인 폼 박스 */
+.login-page .login-form {
+  background-color: #fff;
+  padding: 30px;
+  border: 1px solid #d9d9d9;
+  border-radius: 0;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* 폼 그룹 */
+.login-page .form-group {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.login-page .form-group label {
+  display: inline-block;
+  margin-bottom: 0;
+  margin-right: 20px;
+  font-weight: bold;
+  color: #333333;
+  width: 90px;
+  text-align: left;
+  font-size: 16px;
+}
+
+/* 입력 필드 */
+.login-page .form-control {
+  display: inline-block;
+  width: calc(100% - 110px);
+  padding: 10px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #495057;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  transition: border-color 0.15s ease-in-out,
+              box-shadow 0.15s ease-in-out;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.login-page .form-control:focus {
+  color: #495057;
+  background-color: #fff;
+  border-color: #4dabf7;
+  outline: 0;
+  box-shadow:
+    0 0 0 0.2rem rgba(0, 123, 255, 0.25),
+    inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 로그인 버튼 */
+.login-page .btn-primary {
+  color: #ffffff;
+  background-color: #002555;
+  border-color: #002555;
+  font-weight: bold;
+  padding: 12px 30px;
+  font-size: 18px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out,
+              border-color 0.15s ease-in-out,
+              box-shadow 0.15s ease-in-out;
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.login-page .btn-primary:hover {
+  background-color: #001e44;
+  border-color: #001e44;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.login-page .btn-primary:focus,
+.login-page .btn-primary.focus {
+  box-shadow:
+    0 0 0 0.2rem rgba(0, 123, 255, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.login-page .btn-primary:disabled {
+  background-color: #002555;
+  border-color: #002555;
+  opacity: 0.65;
+}
+
+/* 에러 메시지 */
+.login-page .error-message {
+  color: #dc3545;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+/*
+  로고 영역 전용 스타일
+  .logo-area 클래스를 가진 <body>에서만 적용됨
+*/
 .logo-area {
     background-color: #002555;
     text-align: center;
@@ -30,94 +157,8 @@ body {
     margin: 0 auto;
 }
 
-.login-form {
-    background-color: #fff;
-    padding: 30px;
-    border: 1px solid #d9d9d9;
-    border-radius: 0px;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-}
-
-.form-group {
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-}
-
-.form-group label {
-    display: inline-block;
-    margin-bottom: 0;
-    margin-right: 20px;
-    font-weight: bold;
-    color: #333333;
-    width: 90px;
-    text-align: left;
-    font-size: 16px;
-}
-
-.form-control {
-    display: inline-block;
-    width: calc(100% - 110px);
-    padding: 10px;
-    font-size: 16px;
-    line-height: 1.5;
-    color: #495057;
-    background-color: #fff;
-    background-clip: padding-box;
-    border: 1px solid #ced4da;
-    border-radius: 5px;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.form-control:focus {
-    color: #495057;
-    background-color: #fff;
-    border-color: #4dabf7;
-    outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25), inset 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.login-button-area {
-    text-align: center;
-    margin-top: 25px;
-}
-
-.btn-primary {
-    color: #ffffff;
-    background-color: #002555;
-    border-color: #002555;
-    font-weight: bold;
-    padding: 12px 30px;
-    font-size: 18px;
-    border-radius: 7px;
-    cursor: pointer;
-    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    display: block;
-    width: 100%;
-    margin-top: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
-
-.btn-primary:hover {
-    background-color: #001e44;
-    border-color: #001e44;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-}
-
-.btn-primary:focus, .btn-primary.focus {
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-.btn-primary:disabled {
-    background-color: #002555;
-    border-color: #002555;
-    opacity: 0.65;
-}
-
-.error-message {
-    color: #dc3545;
+.container.mt-4 .form-control,
+.container.mt-4 .form-select {
+    border: 1px solid #002555 !important;
     font-size: 0.9rem;
-    margin-top: 0.25rem;
 }

@@ -13,7 +13,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Entity
-@Getter @Setter
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -59,13 +60,11 @@ public class Account implements UserDetails {
         if (roles == null || roles.isEmpty()) {
             return Collections.emptyList();
         }
-        // 각 역할에 'ROLE_' 접두사를 붙여 SimpleGrantedAuthority로 변환
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .collect(Collectors.toSet());
     }
 
-    // 이하 UserDetails 필드들 true 고정(추후 계정잠금 등 필요시 로직 확장)
     @Override public boolean isAccountNonExpired() { return true; }
     @Override public boolean isAccountNonLocked() { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }

@@ -1,9 +1,11 @@
 package com.nicednb.svrgate.config;
 
 import com.nicednb.svrgate.config.security.CustomAuthFailureHandler;
+import com.nicednb.svrgate.config.security.CustomDaoAuthenticationProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -12,7 +14,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,15 +25,23 @@ public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
+    private final CustomAuthFailureHandler customAuthFailureHandler;
     private final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+
+    // 커스텀 DaoAuthenticationProvider: 비밀번호 오류 등 구체적 메시지를 위해 사용
+    @Bean
+    public DaoAuthenticationProvider customDaoAuthenticationProvider() {
+        CustomDaoAuthenticationProvider provider = new CustomDaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        provider.setHideUserNotFoundExceptions(false);
+        return provider;
+    }
 
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        log.info("AuthenticationManager Bean 생성");
         AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
-        authBuilder
-                .userDetailsService(userDetailsService)
-                .passwordEncoder(passwordEncoder);
+        authBuilder.authenticationProvider(customDaoAuthenticationProvider());
         return authBuilder.build();
     }
 
@@ -49,8 +58,8 @@ public class SecurityConfig {
                 )
                 .formLogin(form -> form
                         .loginPage("/account/login")
-                        // 실패 시 메시지 전달
-                        .failureHandler(new CustomAuthFailureHandler("/account/login?error=true"))
+                        // 커스텀 실패 핸들러 적용 (한글 메시지 URL 인코딩 및 로그인 실패 기록)
+                        .failureHandler(customAuthFailureHandler)
                         .defaultSuccessUrl("/dashboard", true)
                         .usernameParameter("username")
                         .passwordParameter("password")
@@ -62,7 +71,7 @@ public class SecurityConfig {
                         .invalidateHttpSession(true)
                         .permitAll()
                 )
-                .csrf(Customizer.withDefaults()) // 기본 CSRF 활성화
+                .csrf(Customizer.withDefaults())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(
                                 new org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint("/account/login")

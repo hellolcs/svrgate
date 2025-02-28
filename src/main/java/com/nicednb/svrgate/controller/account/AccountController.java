@@ -1,6 +1,7 @@
 package com.nicednb.svrgate.controller.account;
 
 import com.nicednb.svrgate.dto.LoginDto;
+import com.nicednb.svrgate.service.log.OperationLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class AccountController {
 
     private final Logger log = LoggerFactory.getLogger(AccountController.class);
+    private final OperationLogService operationLogService;
 
     @GetMapping("/login")
     public String loginForm(Model model,
@@ -32,16 +34,45 @@ public class AccountController {
             model.addAttribute("error", true);
             model.addAttribute("loginError", loginError);
         }
-        return "account/login"; // templates/account/login.html
+        return "account/login";
     }
 
     @GetMapping("/logout")
     public String logout(HttpServletRequest request, HttpServletResponse response) {
-        log.info("로그아웃 처리");
+        log.info("로그아웃 처리 시작");
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null) {
+            String username = auth.getName();
+            String ipAddress = getClientIpAddress(request);
+            operationLogService.logOperation(username, ipAddress, true, null, "로그아웃", "로그아웃 성공");
             new SecurityContextLogoutHandler().logout(request, response, auth);
         }
+        log.info("로그아웃 처리 완료");
         return "redirect:/account/login";
+    }
+
+    private String getClientIpAddress(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        if (ip != null && ip.contains(":")) {
+            if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
+                ip = "127.0.0.1";
+            }
+        }
+        return ip;
     }
 }

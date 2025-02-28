@@ -1,60 +1,64 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      th:with="currentUri=${#httpServletRequest != null ? #httpServletRequest.requestURI : ''}">
 <head>
   <meta charset="UTF-8">
   <title layout:title-pattern="$CONTENT_TITLE | SVR GATE">SVR GATE</title>
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" th:href="@{/bootstrap/css/bootstrap.min.css}">
-  <link rel="stylesheet" th:href="@{/bootstrap/css/bootstrap-icon.min.css}">
-  <!-- 커스텀 layout.css -->
+  <link rel="stylesheet" th:href="@{/bootstrap/css/bootstrap-icons.min.css}">
+  <!-- Custom CSS -->
   <link rel="stylesheet" th:href="@{/css/layout.css}">
   <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-
 <!-- 상단바 -->
 <header id="topbar">
-  <!-- 로고 영역 -->
+  <!-- 로고 영역: 클릭 시 대시보드로 이동 -->
   <div class="logo-area">
-    <img th:src="@{/img/dnb_main_logo.png}" alt="LOGO"/>
+    <a th:href="@{/dashboard}" style="display: block;">
+      <img th:src="@{/img/dnb_main_logo.png}" alt="LOGO"/>
+    </a>
   </div>
-  <div class="sub-menu">
-    <!-- 이후 sub menu 공간 -->
-  </div>
+  <div class="sub-menu"></div>
   <!-- 우측 버튼 영역 -->
-  <div class="topbar-links d-flex align-items-start">
+  <div class="topbar-links d-flex align-items-start" style="margin-top:2px;">
     <button type="button" class="btn btn-outline-light btn-sm rounded-pill me-2" id="personal-setting-btn" style="font-weight: bold;">개인설정</button>
     <button type="button" class="btn btn-outline-light btn-sm rounded-pill" onclick="location.href='/account/logout'" style="font-weight: bold;">로그아웃</button>
   </div>
 </header>
 
 <!-- 사이드바 -->
-<nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar h-100 fixed-top">
+<nav id="sidebar">
   <ul class="nav flex-column">
     <li class="nav-item mb-2">
-      <a class="nav-link active rounded-0" href="#">
+      <a class="nav-link rounded-0" th:href="@{/dashboard}"
+         th:classappend="${currentUri.startsWith('/dashboard') ? ' active' : ''}">
         <i class="bi bi-speedometer2 me-2"></i> 대시보드
       </a>
-
     </li>
     <li class="nav-item mb-2">
-      <a class="nav-link rounded-0" href="#">
+      <a class="nav-link rounded-0" th:href="@{/rule}"
+         th:classappend="${currentUri.startsWith('/rule') ? ' active' : ''}">
         <i class="bi bi-shield-check me-2"></i> 정책관리
       </a>
     </li>
     <li class="nav-item mb-2">
-      <a class="nav-link rounded-0" href="#">
+      <a class="nav-link rounded-0" th:href="@{/object}"
+         th:classappend="${currentUri.startsWith('/object') ? ' active' : ''}">
         <i class="bi bi-box-seam me-2"></i> 객체관리
       </a>
     </li>
     <li class="nav-item mb-2">
-      <a class="nav-link rounded-0" href="#">
+      <a class="nav-link rounded-0" th:href="@{/system}"
+         th:classappend="${currentUri.startsWith('/system') ? ' active' : ''}">
         <i class="bi bi-gear me-2"></i> 설정
       </a>
     </li>
     <li class="nav-item mb-2">
-      <a class="nav-link rounded-0" href="#">
+      <a class="nav-link rounded-0" th:href="@{/logs}"
+         th:classappend="${currentUri.startsWith('/logs') ? ' active' : ''}">
         <i class="bi bi-journal-code me-2"></i> LOG
       </a>
     </li>
@@ -67,6 +71,6 @@
 </section>
 
 <!-- Bootstrap JS -->
-<script th:src="@{/bootstrap/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/bootstrap/js/bootstrap.bundle.min.js}"></script>
 </body>
 </html>
