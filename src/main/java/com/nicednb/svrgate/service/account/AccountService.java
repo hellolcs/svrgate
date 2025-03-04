@@ -119,4 +119,5 @@ public class AccountService implements UserDetailsService {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("Account not found: " + id));
     }
+
 }

@@ -3,7 +3,6 @@ package com.nicednb.svrgate.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
@@ -13,8 +12,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Entity
-@Getter
-@Setter
+@Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -49,7 +47,7 @@ public class Account implements UserDetails {
 
     private LocalDateTime lastLoginTime;  // 마지막 로그인 시각
 
-    // 역할 정보: 예) "ADMIN", "USER"
+    // 역할 정보
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "account_roles", joinColumns = @JoinColumn(name = "account_id"))
     @Column(name = "role")
@@ -61,10 +59,11 @@ public class Account implements UserDetails {
             return Collections.emptyList();
         }
         return roles.stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .map(r -> new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + r))
                 .collect(Collectors.toSet());
     }
 
+    // 이하 UserDetails 구현
     @Override public boolean isAccountNonExpired() { return true; }
     @Override public boolean isAccountNonLocked() { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }

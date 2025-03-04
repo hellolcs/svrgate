@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{/layout/layout}">
+<head>
+  <meta charset="UTF-8">
+  <title>사용자 관리</title>
+  <!-- 공통 테이블 스타일 -->
+  <link rel="stylesheet" th:href="@{/css/table.css}">
+</head>
+<body>
+<div layout:fragment="content">
+  <div class="container mt-4" style="max-width: 1800px;">
+    <h2>사용자 관리</h2>
+    <table class="table-custom">
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Username</th>
+        <th>Name</th>
+        <th>Department</th>
+        <th>Phone</th>
+        <th>Email</th>
+        <th>Allowed IP</th>
+        <th>Last Login Time</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="user : ${accountList}">
+        <td th:text="${user.id}">1</td>
+        <td th:text="${user.username}">username</td>
+        <td th:text="${user.name}">홍길동</td>
+        <td th:text="${user.department}">부서</td>
+        <td th:text="${user.phoneNumber}">010-1234-5678</td>
+        <td th:text="${user.email}">user@example.com</td>
+        <td th:text="${user.allowedLoginIps}">127.0.0.1</td>
+        <td th:text="${#temporals.format(user.lastLoginTime, 'yyyy-MM-dd HH:mm:ss')}">2025-02-28 12:00:00</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

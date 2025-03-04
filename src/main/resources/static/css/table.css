@@ -1,0 +1,28 @@
+/* table.css - 공통 테이블 스타일 */
+
+.table-custom {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-custom thead {
+  background-color: #E1F6FA;
+  color: black;
+  font-weight: bold;
+}
+
+.table-custom th,
+.table-custom td {
+  border: 1px solid #002555;
+  text-align: center;
+  padding: 8px;
+  font-size: 0.9rem;
+}
+
+.table-custom tbody tr:nth-child(odd) {
+  background-color: #f8f9fa;
+}
+
+.table-custom tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}

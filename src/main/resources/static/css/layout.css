@@ -1,3 +1,5 @@
+/* layout.css */
+
 /* 전역 body 폰트 설정 */
 body {
     font-family: 'Noto Sans KR', sans-serif;
@@ -9,75 +11,71 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: 110px;          /* 상단바 높이: 110px */
+    height: 60px;          /* 상단바 높이: 60px */
     background-color: #002555;
     border-bottom: 1px solid #002555;
-    z-index: 2;
+    z-index: 1000;
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 0 20px;
     color: white;
 }
 
 /* 상단바 로고 영역 */
 #topbar .logo-area {
-    width: 170px;  /* 로고 영역 폭: 170px */
+    width: 170px;               /* 로고 영역 폭 */
+    max-width: 170px;
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
-    overflow: hidden; /* 컨테이너 영역을 벗어나지 않도록 */
+    padding: 0;                 /* 패딩 제거 */
 }
 
-/* 로고 이미지 스타일 */
 #topbar .logo-area img {
-    max-height: 90px;       /* 최대 높이 제한 */
-    max-width: 100%;        /* 컨테이너 내에서 확장 */
-    object-fit: contain;    /* 이미지 비율 유지 */
+    max-width: 170px;           /* 로고 이미지 최대 너비 */
+    width: auto;
+    object-fit: contain;
     display: block;
 }
 
-/* 상단바 버튼 영역 */
+/* 상단바 서브메뉴 */
+#topbar .sub-menu {
+    position: absolute;
+    left: 210px;      /* 로고 영역를 피해서 배치 */
+    bottom: 2px;
+}
+
+/* 상단바 우측 버튼 영역 */
 #topbar .topbar-links {
-    align-self: flex-start;
-    margin-top: 2px;
+    margin-left: auto;
+    margin-right: 10px;
+    display: inline-flex;
+    align-items: center;
 }
 
-/* 기존 버튼 스타일은 그대로 두되, 필요 시 Bootstrap의 btn-outline-light 클래스 사용 */
 #topbar .topbar-links button {
-    margin-top: 10px;
-    border-color: white;
-    background-color: #002555;
-    color: white;
-    font-size: 0.9rem;
-    font-weight: bold;
-    padding: 0.25rem 1.5rem;
-    border-radius: 3px;
-    transition: background-color 0.3s, color 0.3s;
-    align-self: flex-start;
+    margin: 0 0.25rem;
 }
 
-/* ★ 추가: 마우스 오버 시 버튼 색상 반전 효과 */
-#topbar .topbar-links .btn-outline-light:hover {
-    background-color: white !important;
-    color: #002555 !important;
-    border-color: white !important;
+#topbar .btn-outline-light {
+  border: none !important;
+  outline: none !important;
 }
 
 /* ========== 사이드바(sidebar) 스타일 ========== */
 #sidebar {
-    width: 200px;           /* 사이드바 폭: 200px */
+    width: 200px;
     position: fixed;
-    top: 110px;             /* 상단바 아래에서 시작 */
+    /* 상단바의 높이와 독립적으로 배치 */
     left: 0;
-    height: calc(100vh - 110px);
-    background-color: #002555 !important;
-    border-bottom: 1px solid #002555;
+    height: calc(100vh);
+    background-color: #ffffff !important;  /* 흰색 배경 */
+    border-right: 1px solid #002555;         /* 오른쪽 테두리 */
     overflow-y: auto;
-    color: white;
-    z-index: 1;
-    padding: 20px 0;        /* 상하 padding */
+    color: black;
+    z-index: 999;
+    padding: 10px 0;        /* padding 10px로 변경 */
     display: flex;
     flex-direction: column;
 }
@@ -90,29 +88,29 @@ body {
 /* 사이드바 메뉴 링크 스타일 */
 #sidebar .nav-link {
     padding: 12px 20px;
-    color: white;
+    color: black;
     border-radius: 0;
     text-align: left;
-    flex-direction: column;
+    display: block;
 }
 
-#sidebar .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+/* Hover 상태: 비활성 메뉴에만 적용 */
+#sidebar .nav-link:not(.active):hover {
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
+/* Active 상태: 메뉴 진입 시 */
 #sidebar .nav-link.active {
-    background-color: #ffffff;
-    color: #002555;
+    background-color: #002555 !important;
+    color: white !important;
     font-weight: bold;
 }
 
 /* ========== 콘텐츠 영역(content) 스타일 ========== */
 #content {
-    margin-left: 200px;    /* 콘텐츠 영역 시작: 사이드바 폭 */
-    min-height: calc(100vh - 110px);
+    margin-top: 60px;
+    margin-left: 200px;
+    min-height: calc(100vh - 60px);
     background-color: #ffffff;
-    padding-top: 110px;
-    padding-right: 10px;
-    padding-bottom: 10px;
-    padding-left: 10px;
+    padding: 10px;
 }
