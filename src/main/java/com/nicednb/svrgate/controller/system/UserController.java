@@ -4,14 +4,14 @@ import com.nicednb.svrgate.dto.AccountDto;
 import com.nicednb.svrgate.entity.Account;
 import com.nicednb.svrgate.service.AccountService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+// import org.springframework.security.core.Authentication;
+// import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
-import jakarta.servlet.http.HttpServletRequest;
+// import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 @RequiredArgsConstructor
@@ -56,8 +56,8 @@ public class UserController {
         return "redirect:/system/user";
     }
 
-    @PostMapping("/system/user/delete")
-    public String deleteUser(@RequestParam Long userId) {
+    @PostMapping("/delete")
+    public String deleteUser(@RequestParam("userId") Long userId) {
         accountService.deleteAccount(userId);
         return "redirect:/system/user";
     }
