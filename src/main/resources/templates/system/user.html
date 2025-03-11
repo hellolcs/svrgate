@@ -4,17 +4,14 @@
       layout:decorate="~{/layout/layout}">
 <head>
   <meta charset="UTF-8">
-  <title>계정 관리</title>
-  <!-- CSRF 토큰 meta 태그 추가 -->
-  <meta name="_csrf" th:content="${_csrf.token}"/>
-  <meta name="_csrf_parameterName" th:content="${_csrf.parameterName}"/>
+  <title>사용자 관리</title>
   <!-- 공통 테이블 스타일 (Bootstrap 이후에 로드) -->
   <link rel="stylesheet" th:href="@{/css/table.css}">
 </head>
 <body>
 <div layout:fragment="content">
   <div class="container mt-4" style="max-width: 1800px;">
-    <h2>계정 관리</h2>
+    <h2>사용자 관리</h2>
     <!-- 사용자 목록 테이블: table.css의 공통 스타일 적용 -->
     <table class="table-custom">
       <thead>
@@ -50,8 +47,8 @@
       <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
         계정 추가
       </button>
-      <button type="button" class="btn btn-danger" id="deleteUserBtn" disabled>삭제</button>
-      <button type="button" class="btn btn-secondary" id="updateUserBtn">변경</button>
+      <button type="button" class="btn btn-danger" id="deleteUserBtn" disabled onclick="deleteUser()">삭제</button>
+      <button type="button" class="btn btn-secondary" id="updateUserBtn" onclick="updateUser()">변경</button>
     </div>
   </div>
 
@@ -112,7 +109,10 @@
             <div class="row mb-3">
               <label for="allowedLoginIps" class="col-sm-4 col-form-label">접속 IP</label>
               <div class="col-sm-8">
-                <input type="text" class="form-control" th:field="*{allowedLoginIps}" placeholder="예: 192.168.0.1,10.0.0.1" required pattern="^(?:(?:25[0-5]|2[0-4]\\d|[0-1]?\\d{1,2})(?:\\.(?:25[0-5]|2[0-4]\\d|[0-1]?\\d{1,2})){3})(?:\\s*,\\s*(?:(?:25[0-5]|2[0-4]\\d|[0-1]?\\d{1,2})(?:\\.(?:25[0-5]|2[0-4]\\d|[0-1]?\\d{1,2})){3}))*$" title="유효한 IPv4 주소를 콤마(,)로 구분하여 입력해주세요">
+                <!-- 업데이트된 IP 유효성검증 패턴 -->
+                <input type="text" class="form-control" th:field="*{allowedLoginIps}" placeholder="예: 192.168.0.1,10.0.0.1" required
+                       pattern="^((25[0-5]|2[0-4]\d|[01]?\d\d?)(\.(25[0-5]|2[0-4]\d|[01]?\d\d?)){3})(,\s*((25[0-5]|2[0-4]\d|[01]?\d\d?)(\.(25[0-5]|2[0-4]\d|[01]?\d\d?)){3}))*$"
+                       title="유효한 IPv4 주소를 콤마(,)로 구분하여 입력해주세요">
               </div>
             </div>
           </form>
@@ -131,7 +131,6 @@
     /*<![CDATA[*/
     var selectedAccountId = null;
     function selectRow(row) {
-      if (!row) return;
       var rows = document.querySelectorAll('.table-custom tbody tr');
       rows.forEach(function(r) {
         r.classList.remove('table-primary');
@@ -143,21 +142,9 @@
 
     function deleteUser() {
       if (selectedAccountId && confirm("정말로 선택된 사용자를 삭제하시겠습니까?")) {
-        // CSRF 토큰 추가: meta 태그에서 토큰 값 가져오기
-        var csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute("content");
-        var csrfParam = document.querySelector('meta[name="_csrf_parameterName"]').getAttribute("content");
-
         var form = document.createElement("form");
         form.method = "post";
-        form.action = "/system/user/delete/" + selectedAccountId;
-
-        // CSRF 토큰 hidden input 추가
-        var input = document.createElement("input");
-        input.type = "hidden";
-        input.name = csrfParam;
-        input.value = csrfToken;
-        form.appendChild(input);
-
+        form.action = /*[[@{/system/user/delete/}]]*/ "/system/user/delete/" + selectedAccountId;
         document.body.appendChild(form);
         form.submit();
       }
@@ -166,16 +153,11 @@
     function updateUser() {
       alert("사용자 변경 기능은 아직 구현되지 않았습니다.");
     }
-
+ 
+    // 이벤트 리스너 등록 (한번만 등록)
     document.addEventListener("DOMContentLoaded", function() {
-      var deleteBtn = document.getElementById('deleteUserBtn');
-      var updateBtn = document.getElementById('updateUserBtn');
-      if (deleteBtn) {
-        deleteBtn.addEventListener('click', deleteUser);
-      }
-      if (updateBtn) {
-        updateBtn.addEventListener('click', updateUser);
-      }
+      document.getElementById('deleteUserBtn').addEventListener('click', deleteUser);
+      document.getElementById('updateUserBtn').addEventListener('click', updateUser);
     });
     /*]]>*/
   </script>

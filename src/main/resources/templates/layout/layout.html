@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      th:with="currentUri=${#httpServletRequest != null ? #httpServletRequest.requestURI : ''}">
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
 <head>
   <meta charset="UTF-8">
   <title layout:title-pattern="$CONTENT_TITLE | SVR GATE">SVR GATE</title>
@@ -22,77 +21,74 @@
   </style>
 </head>
 <body>
-<!-- Bootstrap JS Bundle -->
-<script th:src="@{/bootstrap/js/bootstrap.bundle.min.js}"></script>
-
-<!-- 상단바 -->
-<header id="topbar">
-  <!-- 로고 영역 -->
-  <div class="logo-area">
-    <a th:href="@{/dashboard}" style="display: block;">
-      <img th:src="@{/img/logo_nicednb_white.png}" alt="LOGO"/>
-    </a>
-  </div>
-  <!-- 서브메뉴 영역: 설정 메뉴 관련 URL 내 '/system' 문자열 포함시 표시 -->
-  <div class="sub-menu" th:if="${currentUri != null and currentUri.contains('/system')}">
-    <div class="btn-group" role="group">
-      <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/system/user'">계정관리</button>
-      <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/system/setting'">시스템설정</button>
+  <!-- 상단바 -->
+  <header id="topbar">
+    <!-- 로고 영역 -->
+    <div class="logo-area">
+      <a th:href="@{/dashboard}" style="display: block;">
+        <img th:src="@{/img/logo_nicednb_white.png}" alt="LOGO"/>
+      </a>
     </div>
-  </div>
-  <!-- 우측 버튼 영역 -->
-  <div class="topbar-links">
-    <button type="button" class="btn btn-outline-light btn-sm rounded-pill" id="personal-setting-btn" style="font-weight: bold;" onclick="location.href='/account/personal'">
-      개인설정
-    </button>
-    <button type="button" class="btn btn-outline-light btn-sm rounded-pill" onclick="location.href='/account/logout'" style="font-weight: bold;">
-      로그아웃
-    </button>
-  </div>
-</header>
+    <!-- 서브메뉴 영역 (설정 메뉴에만 표시됨) -->
+    <div class="sub-menu" th:if="${currentUri != null and currentUri.startsWith('/system')}">
+      <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/system/user'">계정관리</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/system/setting'">시스템 설정</button>
+      </div>
+    </div>
+    <!-- 우측 버튼 영역 -->
+    <div class="topbar-links">
+      <button type="button" class="btn btn-outline-light btn-sm rounded-pill" id="personal-setting-btn" style="font-weight: bold;" onclick="location.href='/account/personal'">
+        개인설정
+      </button>
+      <button type="button" class="btn btn-outline-light btn-sm rounded-pill" onclick="location.href='/account/logout'" style="font-weight: bold;">
+        로그아웃
+      </button>
+    </div>
+  </header>
 
-<!-- 사이드바 -->
-<nav id="sidebar">
-  <ul class="nav flex-column">
-    <li class="nav-item mb-2">
-      <a class="nav-link rounded-0" th:href="@{/dashboard}"
-         th:classappend="${currentUri != null and currentUri.startsWith('/dashboard') ? ' active' : ''}">
-        <i class="bi bi-speedometer2 me-2"></i> 대시보드
-      </a>
-    </li>
-    <li class="nav-item mb-2">
-      <a class="nav-link rounded-0" th:href="@{/rule}"
-         th:classappend="${currentUri != null and currentUri.startsWith('/rule') ? ' active' : ''}">
-        <i class="bi bi-shield-check me-2"></i> 정책관리
-      </a>
-    </li>
-    <li class="nav-item mb-2">
-      <a class="nav-link rounded-0" th:href="@{/object}"
-         th:classappend="${currentUri != null and currentUri.startsWith('/object') ? ' active' : ''}">
-        <i class="bi bi-box-seam me-2"></i> 객체관리
-      </a>
-    </li>
-    <li class="nav-item mb-2">
-      <a class="nav-link rounded-0" th:href="@{/system/user}"
-         th:classappend="${currentUri != null and currentUri.startsWith('/system') ? ' active' : ''}">
-        <i class="bi bi-gear me-2"></i> 설정
-      </a>
-    </li>
-    <li class="nav-item mb-2">
-      <a class="nav-link rounded-0" th:href="@{/logs}"
-         th:classappend="${currentUri != null and currentUri.startsWith('/logs') ? ' active' : ''}">
-        <i class="bi bi-journal-code me-2"></i> LOG
-      </a>
-    </li>
-  </ul>
-</nav>
+  <!-- 사이드바 -->
+  <nav id="sidebar">
+    <ul class="nav flex-column">
+      <li class="nav-item mb-2">
+        <a class="nav-link rounded-0" th:href="@{/dashboard}"
+           th:classappend="${currentUri != null and currentUri.startsWith('/dashboard') ? ' active' : ''}">
+          <i class="bi bi-speedometer2 me-2"></i> 대시보드
+        </a>
+      </li>
+      <li class="nav-item mb-2">
+        <a class="nav-link rounded-0" th:href="@{/rule}"
+           th:classappend="${currentUri != null and currentUri.startsWith('/rule') ? ' active' : ''}">
+          <i class="bi bi-shield-check me-2"></i> 정책관리
+        </a>
+      </li>
+      <li class="nav-item mb-2">
+        <a class="nav-link rounded-0" th:href="@{/object}"
+           th:classappend="${currentUri != null and currentUri.startsWith('/object') ? ' active' : ''}">
+          <i class="bi bi-box-seam me-2"></i> 객체관리
+        </a>
+      </li>
+      <li class="nav-item mb-2">
+        <a class="nav-link rounded-0" th:href="@{/system/user}"
+           th:classappend="${currentUri != null and currentUri.startsWith('/system') ? ' active' : ''}">
+          <i class="bi bi-gear me-2"></i> 설정
+        </a>
+      </li>
+      <li class="nav-item mb-2">
+        <a class="nav-link rounded-0" th:href="@{/logs}"
+           th:classappend="${currentUri != null and currentUri.startsWith('/logs') ? ' active' : ''}">
+          <i class="bi bi-journal-code me-2"></i> LOG
+        </a>
+      </li>
+    </ul>
+  </nav>
 
-<!-- 메인 콘텐츠 영역 -->
-<section id="content" layout:fragment="content">
-  <!-- 각 페이지별 콘텐츠가 이 영역에 삽입됩니다 -->
-</section>
+  <!-- 메인 콘텐츠 영역 -->
+  <section id="content" layout:fragment="content">
+    <!-- 각 페이지별 콘텐츠가 이 영역에 삽입됩니다 -->
+  </section>
 
-<!-- Bootstrap JS Bundle (다시 로드 필요 시) -->
-<script th:src="@{/bootstrap/js/bootstrap.bundle.min.js}"></script>
+  <!-- Bootstrap JS -->
+  <script th:src="@{/bootstrap/js/bootstrap.bundle.min.js}"></script>
 </body>
 </html>
