@@ -31,8 +31,8 @@ public class UserController {
     // 사용자 추가 처리: 모달 폼 전송 (POST /system/user/add)
     @PostMapping("/add")
     public String addAccount(@Valid @ModelAttribute("accountDto") AccountDto accountDto,
-                             BindingResult bindingResult,
-                             Model model) {
+            BindingResult bindingResult,
+            Model model) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("accountList", accountService.findAllAccounts());
             return "system/user";
@@ -56,10 +56,9 @@ public class UserController {
         return "redirect:/system/user";
     }
 
-    // 사용자 삭제 처리: 선택된 사용자 삭제
-    @PostMapping("/delete/{id}")
-    public String deleteUser(@PathVariable Long id) {
-        accountService.deleteAccount(id);
+    @PostMapping("/system/user/delete")
+    public String deleteUser(@RequestParam Long userId) {
+        accountService.deleteAccount(userId);
         return "redirect:/system/user";
     }
 
