@@ -1,4 +1,4 @@
-package com.nicednb.svrgate.log;
+package com.nicednb.svrgate.controller.log;
 
 import com.nicednb.svrgate.entity.OperationHistory;
 import com.nicednb.svrgate.repository.OperationHistoryRepository;

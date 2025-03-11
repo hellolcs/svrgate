@@ -1,6 +1,6 @@
 package com.nicednb.svrgate.config.security;
 
-import com.nicednb.svrgate.service.log.OperationLogService;
+import com.nicednb.svrgate.service.OperationLogService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -1,7 +1,7 @@
 package com.nicednb.svrgate.controller.account;
 
 import com.nicednb.svrgate.dto.LoginDto;
-import com.nicednb.svrgate.service.log.OperationLogService;
+import com.nicednb.svrgate.service.OperationLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

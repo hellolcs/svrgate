@@ -11,29 +11,33 @@
 <div layout:fragment="content">
   <div class="container mt-4" style="max-width: 1800px;">
     <h2>로그 조회</h2>
-    <!-- 검색 및 필터링 폼 -->
+    <!-- 검색 및 필터링 폼 (POST 방식) -->
     <form class="row g-3 mb-4" th:action="@{/logs}" method="post">
+      <!-- 조회 기간: 시작일 -->
       <div class="col-md-2">
-        <input type="datetime-local" name="startDate" class="form-control"
-               th:value="${startDateValue}">
+        <input type="datetime-local" name="startDate" class="form-control" th:value="${startDateValue}">
       </div>
+      <!-- 조회 기간: 종료일 -->
       <div class="col-md-2">
-        <input type="datetime-local" name="endDate" class="form-control"
-               th:value="${endDateValue}">
+        <input type="datetime-local" name="endDate" class="form-control" th:value="${endDateValue}">
       </div>
+      <!-- 검색어: 최소 2글자 이상 -->
       <div class="col-md-3">
         <input type="text" name="searchText" class="form-control" placeholder="검색어 입력"
-               th:value="${searchText}">
+               th:value="${searchText}" minlength="2" title="최소 2글자 이상 입력해야 합니다.">
       </div>
+      <!-- 로그 타입 -->
       <div class="col-md-2">
         <select class="form-select" name="logType">
           <option value="" th:selected="${logType == null or logType == ''}">전체</option>
           <option value="로그인" th:selected="${logType == '로그인'}">로그인</option>
           <option value="정책관리" th:selected="${logType == '정책관리'}">정책관리</option>
           <option value="객체관리" th:selected="${logType == '객체관리'}">객체관리</option>
-          <option value="설정" th:selected="${logType == '설정'}">설정</option>
+          <option value="계정관리" th:selected="${logType == '계정관리'}">계정관리</option>
+          <option value="시스템설정" th:selected="${logType == '시스템설정'}">시스템설정</option>
         </select>
       </div>
+      <!-- 페이지 크기 선택 -->
       <div class="col-md-1">
         <select class="form-select" name="size">
           <option value="30" th:selected="${size == 30}">30</option>
@@ -42,6 +46,7 @@
           <option value="300" th:selected="${size == 300}">300</option>
         </select>
       </div>
+      <!-- 검색 버튼 -->
       <div class="col-md-2">
         <button type="submit" class="btn btn-outline-dark btn-sm rounded-pill w-100" style="font-weight: bold;">
           검색
@@ -49,7 +54,7 @@
       </div>
     </form>
 
-    <!-- 로그 목록 테이블 -->
+    <!-- 로그 목록 테이블 (공통 table.css 스타일 적용) -->
     <table class="table-custom">
       <thead>
       <tr>

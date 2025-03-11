@@ -26,3 +26,9 @@
 .table-custom tbody tr:hover {
   background-color: rgba(0, 0, 0, 0.05);
 }
+
+/* 선택된 행에 적용 (Bootstrap table‑primary 색상 적용) */
+.table-custom tbody tr.table-primary {
+  background-color: #007bff !important; /* 기본 table-primary 배경색 (필요 시 조정) */
+  color: white !important;
+}

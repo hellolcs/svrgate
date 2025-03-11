@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      th:with="currentUri=${currentUri}">
+      th:with="currentUri=${#httpServletRequest != null ? #httpServletRequest.requestURI : ''}">
 <head>
   <meta charset="UTF-8">
   <title layout:title-pattern="$CONTENT_TITLE | SVR GATE">SVR GATE</title>
@@ -13,7 +13,7 @@
   <link rel="stylesheet" th:href="@{/css/style.css}">
   <link rel="stylesheet" th:href="@{/css/table.css}">
   <style>
-    /* 추가: topbar 서브메뉴 버튼 hover 효과 (CSS로 지정) */
+    /* topbar 서브메뉴 버튼 hover 효과 */
     #topbar .sub-menu .btn:hover {
       background-color: white !important;
       color: #002555 !important;
@@ -22,7 +22,9 @@
   </style>
 </head>
 <body>
+<!-- Bootstrap JS Bundle -->
 <script th:src="@{/bootstrap/js/bootstrap.bundle.min.js}"></script>
+
 <!-- 상단바 -->
 <header id="topbar">
   <!-- 로고 영역 -->
@@ -31,11 +33,11 @@
       <img th:src="@{/img/logo_nicednb_white.png}" alt="LOGO"/>
     </a>
   </div>
-  <!-- 서브메뉴 영역: 오직 설정 메뉴에만 표시 -->
-  <div class="sub-menu" th:if="${currentUri != null and currentUri.startsWith('/system')}">
+  <!-- 서브메뉴 영역: 설정 메뉴 관련 URL 내 '/system' 문자열 포함시 표시 -->
+  <div class="sub-menu" th:if="${currentUri != null and currentUri.contains('/system')}">
     <div class="btn-group" role="group">
       <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/system/user'">계정관리</button>
-      <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/system/setting'">시스템 설정</button>
+      <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/system/setting'">시스템설정</button>
     </div>
   </div>
   <!-- 우측 버튼 영역 -->
@@ -90,7 +92,7 @@
   <!-- 각 페이지별 콘텐츠가 이 영역에 삽입됩니다 -->
 </section>
 
-<!-- Bootstrap JS -->
+<!-- Bootstrap JS Bundle (다시 로드 필요 시) -->
 <script th:src="@{/bootstrap/js/bootstrap.bundle.min.js}"></script>
 </body>
 </html>

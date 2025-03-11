@@ -1,8 +1,8 @@
-package com.nicednb.svrgate.service.account;
+package com.nicednb.svrgate.service;
 
 import com.nicednb.svrgate.entity.Account;
 import com.nicednb.svrgate.repository.AccountRepository;
-import com.nicednb.svrgate.service.log.OperationLogService;
+// import com.nicednb.svrgate.service.OperationLogService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,13 +38,17 @@ public class AccountService implements UserDetailsService {
     public Account loadUserByUsername(String username) throws UsernameNotFoundException {
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 계정입니다."));
+
         HttpServletRequest request = ((ServletRequestAttributes)
                 RequestContextHolder.currentRequestAttributes()).getRequest();
         String clientIp = getClientIpAddress(request);
 
         // IP 허용 검사
         if (!isAllowedIp(account.getAllowedLoginIps(), clientIp)) {
-            operationLogService.logOperation(username, clientIp, false, "로그인 실패 - 접근이 허용되지 않은 IP", "로그인", "IP 불일치");
+            operationLogService.logOperation(username, clientIp, false,
+                    "로그인",           // description: 동작 유형
+                    "로그인 실패 - 접근이 허용되지 않은 IP", // message: 대상 계정에 대한 결과 메시지
+                    "로그인");          // 추가 분류(예: 로그 종류)
             log.warn("로그인 실패 - IP 불일치 username={}, clientIp={}", username, clientIp);
             throw new BadCredentialsException("접근이 허용되지 않은 IP 주소입니다.");
         }
@@ -53,12 +57,16 @@ public class AccountService implements UserDetailsService {
         account.setLastLoginTime(LocalDateTime.now());
         accountRepository.save(account);
 
-        operationLogService.logOperation(username, clientIp, true, "로그인 성공", "로그인", "로그인 성공");
+        operationLogService.logOperation(username, clientIp, true,
+                "로그인",           // description: 동작 유형
+                "로그인 성공",      // message: 대상 계정에 대한 결과 메시지
+                "로그인");          // 추가 분류
         log.info("로그인 성공 username={}, ip={}", username, clientIp);
 
         return account;
     }
 
+    // 계정 생성/변경: 비밀번호 인코딩 처리 후 저장하고 로깅 처리
     @Transactional
     public Account saveAccount(Account account) {
         if (!account.getPassword().startsWith("{bcrypt}")) {
@@ -69,15 +77,24 @@ public class AccountService implements UserDetailsService {
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         String clientIp = getCurrentClientIp();
         if (isNew) {
-            operationLogService.logOperation(actor, clientIp, true, "계정 추가: " + savedAccount.getUsername(), "계정관리", "새 계정 추가");
+            // 설명(description): "계정 추가", 메시지(message): "{계정명}이 생성되었습니다."
+            operationLogService.logOperation(actor, clientIp, true,
+                    savedAccount.getUsername() + "이 생성되었습니다.",
+                    "계정관리",
+                    "계정 추가");
             log.info("계정 추가: actor={}, target={}", actor, savedAccount.getUsername());
         } else {
-            operationLogService.logOperation(actor, clientIp, true, "계정 변경: " + savedAccount.getUsername(), "계정관리", "계정 변경");
+            // 설명(description): "계정 변경", 메시지(message): "{계정명}이 변경되었습니다."
+            operationLogService.logOperation(actor, clientIp, true,
+                    savedAccount.getUsername() + "이 변경되었습니다.",
+                    "계정관리",
+                    "계정 변경");
             log.info("계정 변경: actor={}, target={}", actor, savedAccount.getUsername());
         }
         return savedAccount;
     }
 
+    // 계정 삭제: 삭제 전 대상 계정 조회 후 삭제 및 로깅 처리
     @Transactional
     public void deleteAccount(Long id) {
         Optional<Account> accountOpt = accountRepository.findById(id);
@@ -86,7 +103,11 @@ public class AccountService implements UserDetailsService {
             accountRepository.deleteById(id);
             String actor = SecurityContextHolder.getContext().getAuthentication().getName();
             String clientIp = getCurrentClientIp();
-            operationLogService.logOperation(actor, clientIp, true, "계정 삭제: " + targetUsername, "계정관리", "계정 삭제");
+            // 설명(description): "계정 삭제", 메시지(message): "{계정명}이 삭제되었습니다."
+            operationLogService.logOperation(actor, clientIp, true,
+                    targetUsername + "이 삭제되었습니다.",
+                    "계정관리",
+                    "계정 삭제");
             log.info("계정 삭제: actor={}, target={}", actor, targetUsername);
         }
     }
@@ -145,5 +166,3 @@ public class AccountService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("Account not found: " + id));
     }
 }
-
-x

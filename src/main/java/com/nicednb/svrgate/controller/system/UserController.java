@@ -1,11 +1,17 @@
 package com.nicednb.svrgate.controller.system;
 
+import com.nicednb.svrgate.dto.AccountDto;
 import com.nicednb.svrgate.entity.Account;
-import com.nicednb.svrgate.service.account.AccountService;
+import com.nicednb.svrgate.service.AccountService;
 import lombok.RequiredArgsConstructor;
+// import org.springframework.security.core.Authentication;
+// import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+// import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 @RequiredArgsConstructor
@@ -14,31 +20,46 @@ public class UserController {
 
     private final AccountService accountService;
 
-    // 사용자 관리 페이지: 사용자 목록 조회
+    // 사용자 관리 페이지: 사용자 목록 조회 및 신규 계정 추가 폼 바인딩
     @GetMapping
     public String userManagement(Model model) {
         model.addAttribute("accountList", accountService.findAllAccounts());
-        return "system/user";
+        model.addAttribute("accountDto", new AccountDto());
+        return "system/user"; // 템플릿 파일: system/user.html
     }
 
-    // 사용자 추가 처리 (Modal 폼 전송)
-    @PostMapping("/new")
-    public String addUser(@ModelAttribute Account account,
-                          @RequestParam("passwordConfirm") String passwordConfirm,
-                          Model model) {
-        if (!account.getPassword().equals(passwordConfirm)) {
+    // 사용자 추가 처리: 모달 폼 전송 (POST /system/user/add)
+    @PostMapping("/add")
+    public String addAccount(@Valid @ModelAttribute("accountDto") AccountDto accountDto,
+                             BindingResult bindingResult,
+                             Model model) {
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("accountList", accountService.findAllAccounts());
+            return "system/user";
+        }
+        if (!accountDto.getPassword().equals(accountDto.getPasswordConfirm())) {
             model.addAttribute("errorMessage", "비밀번호가 일치하지 않습니다.");
             model.addAttribute("accountList", accountService.findAllAccounts());
             return "system/user";
         }
+        // DTO -> Account 엔티티 매핑
+        Account account = Account.builder()
+                .username(accountDto.getUsername())
+                .password(accountDto.getPassword())
+                .name(accountDto.getName())
+                .department(accountDto.getDepartment())
+                .phoneNumber(accountDto.getPhoneNumber())
+                .email(accountDto.getEmail())
+                .allowedLoginIps(accountDto.getAllowedLoginIps())
+                .build();
         accountService.saveAccount(account);
         return "redirect:/system/user";
     }
 
-    // 사용자 삭제 처리 (예시)
-    @PostMapping("/delete")
-    public String deleteUser(@RequestParam("userId") Long userId) {
-        accountService.deleteAccount(userId);
+    // 사용자 삭제 처리: 선택된 사용자 삭제
+    @PostMapping("/delete/{id}")
+    public String deleteUser(@PathVariable Long id) {
+        accountService.deleteAccount(id);
         return "redirect:/system/user";
     }
 
