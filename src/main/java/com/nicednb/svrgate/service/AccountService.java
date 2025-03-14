@@ -20,6 +20,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.nicednb.svrgate.dto.AccountDto;
+import com.nicednb.svrgate.dto.PersonalSettingDto;
 import com.nicednb.svrgate.entity.Account;
 import com.nicednb.svrgate.exception.IpAddressRestrictionException;
 import com.nicednb.svrgate.repository.AccountRepository;
@@ -46,17 +47,18 @@ public class AccountService implements UserDetailsService {
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
                 .getRequest();
         String clientIp = getClientIpAddress(request);
-        
+
         // IP 체크는 유지하지만, 추가 인증 단계에서 확인하도록 정보만 저장
         account.setClientIp(clientIp); // Account 클래스에 @Transient 필드 추가 필요
-        
+
         // 로그인 성공 시각은 인증 성공 후 업데이트될 예정
         return account;
     }
 
     /**
      * 지정된 IP가 계정의 허용 IP 목록에 포함되어 있는지 확인합니다.
-     * 이 메서드는 다른 컴포넌트(예: CustomDaoAuthenticationProvider)에서 호출할 수 있도록 public으로 설정되었습니다.
+     * 이 메서드는 다른 컴포넌트(예: CustomDaoAuthenticationProvider)에서 호출할 수 있도록 public으로
+     * 설정되었습니다.
      */
     public boolean isAllowedIp(String allowedLoginIps, String clientIp) {
         if (allowedLoginIps == null || allowedLoginIps.trim().isEmpty()) {
@@ -75,7 +77,7 @@ public class AccountService implements UserDetailsService {
     public void updateLoginSuccess(Account account) {
         account.setLastLoginTime(LocalDateTime.now());
         accountRepository.save(account);
-        
+
         String clientIp = account.getClientIp();
         operationLogService.logOperation(account.getUsername(), clientIp, true,
                 null, // 성공이므로 실패 사유 없음
@@ -98,28 +100,28 @@ public class AccountService implements UserDetailsService {
     public void deleteAccountByUsername(String username) {
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("삭제할 계정을 찾을 수 없습니다: " + username));
-        
+
         accountRepository.delete(account);
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         String clientIp = getCurrentClientIp();
-        
+
         // 로그 메시지 형식 통일: failReason에 대상 정보를 포함
         operationLogService.logOperation(
-                actor,             // 작업 수행자
-                clientIp,          // IP 주소
-                true,              // 성공 여부
+                actor, // 작업 수행자
+                clientIp, // IP 주소
+                true, // 성공 여부
                 "대상: " + username, // 대상 정보를 failReason 필드에 기록
-                "계정관리",          // 작업 유형
-                "계정 삭제"          // 간결한 설명
+                "계정관리", // 작업 유형
+                "계정 삭제" // 간결한 설명
         );
-        
+
         log.info("계정 삭제: actor={}, target={}", actor, username);
     }
 
     @Transactional
     public void updateAccount(AccountDto accountDto) {
         log.debug("계정 업데이트 시작: username={}", accountDto.getUsername());
-        
+
         Account account = accountRepository.findByUsername(accountDto.getUsername())
                 .orElseThrow(() -> {
                     log.warn("계정 업데이트 실패: 사용자명 없음 - {}", accountDto.getUsername());
@@ -142,19 +144,19 @@ public class AccountService implements UserDetailsService {
         }
 
         accountRepository.save(account);
-        
+
         // 변경 로깅 - 형식 통일
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         String clientIp = getCurrentClientIp();
         operationLogService.logOperation(
-                actor,                     // 작업 수행자
-                clientIp,                  // IP 주소
-                true,                      // 성공 여부
+                actor, // 작업 수행자
+                clientIp, // IP 주소
+                true, // 성공 여부
                 "대상: " + account.getUsername(), // 대상 정보를 failReason 필드에 기록
-                "계정관리",                  // 작업 유형
-                "계정 정보 변경"              // 간결한 설명
+                "계정관리", // 작업 유형
+                "계정 정보 변경" // 간결한 설명
         );
-        
+
         log.info("계정 업데이트 완료: username={}", accountDto.getUsername());
     }
 
@@ -167,31 +169,31 @@ public class AccountService implements UserDetailsService {
         Account savedAccount = accountRepository.save(account);
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         String clientIp = getCurrentClientIp();
-        
+
         if (isNew) {
             // 계정 생성 로깅 - 형식 통일
             operationLogService.logOperation(
-                    actor,                         // 작업 수행자
-                    clientIp,                      // IP 주소
-                    true,                          // 성공 여부
+                    actor, // 작업 수행자
+                    clientIp, // IP 주소
+                    true, // 성공 여부
                     "대상: " + savedAccount.getUsername(), // 대상 정보를 failReason 필드에 기록
-                    "계정관리",                      // 작업 유형
-                    "계정 생성"                      // 간결한 설명
+                    "계정관리", // 작업 유형
+                    "계정 생성" // 간결한 설명
             );
             log.info("계정 추가: actor={}, target={}", actor, savedAccount.getUsername());
         } else {
             // 계정 변경 로깅 - 형식 통일
             operationLogService.logOperation(
-                    actor,                         // 작업 수행자
-                    clientIp,                      // IP 주소
-                    true,                          // 성공 여부
+                    actor, // 작업 수행자
+                    clientIp, // IP 주소
+                    true, // 성공 여부
                     "대상: " + savedAccount.getUsername(), // 대상 정보를 failReason 필드에 기록
-                    "계정관리",                      // 작업 유형
-                    "계정 정보 변경"                  // 간결한 설명
+                    "계정관리", // 작업 유형
+                    "계정 정보 변경" // 간결한 설명
             );
             log.info("계정 변경: actor={}, target={}", actor, savedAccount.getUsername());
         }
-        
+
         return savedAccount;
     }
 
@@ -239,5 +241,47 @@ public class AccountService implements UserDetailsService {
     public Account findAccountById(Long id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("계정을 찾을 수 없습니다: " + id));
+    }
+
+    @Transactional
+    public void updatePersonalSetting(PersonalSettingDto personalSettingDto) {
+        log.debug("개인설정 업데이트 시작: username={}", personalSettingDto.getUsername());
+
+        Account account = accountRepository.findByUsername(personalSettingDto.getUsername())
+                .orElseThrow(() -> {
+                    log.warn("계정 업데이트 실패: 사용자명 없음 - {}", personalSettingDto.getUsername());
+                    return new IllegalArgumentException("존재하지 않는 사용자명: " + personalSettingDto.getUsername());
+                });
+
+        // 기존 계정 정보 업데이트
+        account.setName(personalSettingDto.getName());
+        account.setDepartment(personalSettingDto.getDepartment());
+        account.setPhoneNumber(personalSettingDto.getPhoneNumber());
+        account.setEmail(personalSettingDto.getEmail());
+        account.setAllowedLoginIps(personalSettingDto.getAllowedLoginIps());
+
+        // 비밀번호가 입력된 경우에만 업데이트
+        if (StringUtils.hasText(personalSettingDto.getPassword())) {
+            log.debug("계정 비밀번호 변경: username={}", personalSettingDto.getUsername());
+            account.setPassword(passwordEncoder.encode(personalSettingDto.getPassword()));
+        } else {
+            log.debug("계정 비밀번호 유지: username={}", personalSettingDto.getUsername());
+        }
+
+        accountRepository.save(account);
+
+        // 변경 로깅 - 형식 통일
+        String actor = SecurityContextHolder.getContext().getAuthentication().getName();
+        String clientIp = getCurrentClientIp();
+        operationLogService.logOperation(
+                actor, // 작업 수행자
+                clientIp, // IP 주소
+                true, // 성공 여부
+                "대상: " + account.getUsername(), // 대상 정보를 failReason 필드에 기록
+                "계정관리", // 작업 유형
+                "개인설정 변경" // 간결한 설명
+        );
+
+        log.info("개인설정 업데이트 완료: username={}", personalSettingDto.getUsername());
     }
 }
