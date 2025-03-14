@@ -2,10 +2,13 @@ package com.nicednb.svrgate.config;
 
 import com.nicednb.svrgate.config.security.CustomAuthFailureHandler;
 import com.nicednb.svrgate.config.security.CustomDaoAuthenticationProvider;
+import com.nicednb.svrgate.service.AccountService;
+import com.nicednb.svrgate.service.OperationLogService;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+// import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -23,18 +26,22 @@ import org.slf4j.LoggerFactory;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final UserDetailsService userDetailsService;
+ private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final CustomAuthFailureHandler customAuthFailureHandler;
+    private final AccountService accountService;
+    private final OperationLogService operationLogService;
     private final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
-    // 커스텀 DaoAuthenticationProvider: 비밀번호 오류 등 구체적 메시지를 위해 사용
     @Bean
-    public DaoAuthenticationProvider customDaoAuthenticationProvider() {
+    public CustomDaoAuthenticationProvider customDaoAuthenticationProvider() {
         CustomDaoAuthenticationProvider provider = new CustomDaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
         provider.setHideUserNotFoundExceptions(false);
+        // 추가: AccountService 및 OperationLogService 주입
+        provider.setAccountService(accountService);
+        provider.setOperationLogService(operationLogService);
         return provider;
     }
 

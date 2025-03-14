@@ -41,13 +41,16 @@ public class CustomAuthFailureHandler extends SimpleUrlAuthenticationFailureHand
         
         // 예외 타입에 따른 메시지 처리
         if (exception instanceof BadCredentialsException) {
-            errorMessage = "아이디 또는 비밀번호가 일치하지 않습니다.";
+            errorMessage = exception.getMessage();
         } else if (exception instanceof IpAddressRestrictionException) {
             errorMessage = exception.getMessage();
         } else if (exception instanceof InternalAuthenticationServiceException) {
-            // 내부에 원인이 IpAddressRestrictionException인 경우 처리
-            if (exception.getCause() instanceof IpAddressRestrictionException) {
-                errorMessage = exception.getCause().getMessage();
+            // 내부에 원인이 다른 예외인 경우 확인
+            Throwable cause = exception.getCause();
+            if (cause instanceof IpAddressRestrictionException) {
+                errorMessage = cause.getMessage();
+            } else if (cause instanceof BadCredentialsException) {
+                errorMessage = cause.getMessage();
             } else {
                 errorMessage = "내부 시스템 문제로 로그인 요청을 처리할 수 없습니다.";
                 log.error("인증 중 내부 오류 발생", exception);
@@ -77,7 +80,8 @@ public class CustomAuthFailureHandler extends SimpleUrlAuthenticationFailureHand
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
+
+                String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getHeader("Proxy-Client-IP");
         }

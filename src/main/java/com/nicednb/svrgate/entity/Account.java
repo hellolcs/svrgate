@@ -47,6 +47,9 @@ public class Account implements UserDetails {
 
     private LocalDateTime lastLoginTime;  // 마지막 로그인 시각
 
+    @Transient // DB에 저장되지 않는 임시 필드
+    private String clientIp;  // 접속 IP를 임시 저장하기 위한 필드
+    
     // 역할 정보
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "account_roles", joinColumns = @JoinColumn(name = "account_id"))

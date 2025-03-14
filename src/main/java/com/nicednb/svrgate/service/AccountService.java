@@ -21,12 +21,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.nicednb.svrgate.dto.AccountDto;
 import com.nicednb.svrgate.entity.Account;
-import com.nicednb.svrgate.exception.IpAddressRestrictionException;
+// import com.nicednb.svrgate.exception.IpAddressRestrictionException;
 import com.nicednb.svrgate.repository.AccountRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-
 @Service
 @RequiredArgsConstructor
 public class AccountService implements UserDetailsService {
@@ -36,40 +35,54 @@ public class AccountService implements UserDetailsService {
     private final OperationLogService operationLogService;
     private final Logger log = LoggerFactory.getLogger(AccountService.class);
 
+
     @Override
     @Transactional
     public Account loadUserByUsername(String username) throws UsernameNotFoundException {
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 계정입니다."));
 
+        // 로그인 로직은 유지하되, IP 검사는 CustomDaoAuthenticationProvider로 이동
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
                 .getRequest();
         String clientIp = getClientIpAddress(request);
+        
+        // IP 체크는 유지하지만, 추가 인증 단계에서 확인하도록 정보만 저장
+        account.setClientIp(clientIp); // Account 클래스에 @Transient 필드 추가 필요
+        
+        // 로그인 성공 시각은 인증 성공 후 업데이트될 예정
+        return account;
+    }
 
-        // IP 허용 검사
-        if (!isAllowedIp(account.getAllowedLoginIps(), clientIp)) {
-            operationLogService.logOperation(username, clientIp, false,
-                    "접근이 허용되지 않은 IP", // 실패 사유
-                    "로그인", // 작업 유형
-                    "로그인 실패" // 설명
-            );
-            log.warn("로그인 실패 - IP 불일치 username={}, clientIp={}", username, clientIp);
-            // BadCredentialsException 대신 IpAddressRestrictionException 사용
-            throw new IpAddressRestrictionException("접근이 허용되지 않은 IP 주소입니다: " + clientIp);
+    /**
+     * 지정된 IP가 계정의 허용 IP 목록에 포함되어 있는지 확인합니다.
+     * 이 메서드는 다른 컴포넌트(예: CustomDaoAuthenticationProvider)에서 호출할 수 있도록 public으로 설정되었습니다.
+     */
+    public boolean isAllowedIp(String allowedLoginIps, String clientIp) {
+        if (allowedLoginIps == null || allowedLoginIps.trim().isEmpty()) {
+            return true;
         }
+        List<String> allowedIpsList = Arrays.stream(allowedLoginIps.split(","))
+                .map(String::trim)
+                .collect(Collectors.toList());
+        return allowedIpsList.contains(clientIp.trim());
+    }
 
-        // 로그인 성공 시각 업데이트
+    /**
+     * 로그인 성공 후 계정 정보를 업데이트합니다.
+     */
+    @Transactional
+    public void updateLoginSuccess(Account account) {
         account.setLastLoginTime(LocalDateTime.now());
         accountRepository.save(account);
-
-        operationLogService.logOperation(username, clientIp, true,
+        
+        String clientIp = account.getClientIp();
+        operationLogService.logOperation(account.getUsername(), clientIp, true,
                 null, // 성공이므로 실패 사유 없음
                 "로그인", // 작업 유형
                 "로그인 성공" // 설명
         );
-        log.info("로그인 성공 username={}, ip={}", username, clientIp);
-
-        return account;
+        log.info("로그인 성공 username={}, ip={}", account.getUsername(), clientIp);
     }
 
     @Transactional(readOnly = true)
@@ -78,6 +91,31 @@ public class AccountService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("계정을 찾을 수 없습니다: " + username));
     }
 
+    private String getClientIpAddress(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("Proxy-Client-IP");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        if (isEmptyIp(ip))
+            ip = request.getRemoteAddr();
+        if (ip != null && ip.contains(":")) {
+            if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
+                ip = "127.0.0.1";
+            }
+        }
+        return ip;
+    }
+
+    private boolean isEmptyIp(String ip) {
+        return (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip));
+    }
+
+    
     // 계정 생성/변경: 비밀번호 인코딩 처리 후 저장하고 로깅 처리
     @Transactional
     public Account saveAccount(Account account) {
@@ -164,42 +202,6 @@ public class AccountService implements UserDetailsService {
         );
 
         log.info("계정 업데이트 완료: username={}", accountDto.getUsername());
-    }
-
-    // 나머지 메서드들...
-
-    private boolean isAllowedIp(String allowedLoginIps, String clientIp) {
-        if (allowedLoginIps == null || allowedLoginIps.trim().isEmpty()) {
-            return true;
-        }
-        List<String> allowedIpsList = Arrays.stream(allowedLoginIps.split(","))
-                .map(String::trim)
-                .collect(Collectors.toList());
-        return allowedIpsList.contains(clientIp.trim());
-    }
-
-    private String getClientIpAddress(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (isEmptyIp(ip))
-            ip = request.getHeader("Proxy-Client-IP");
-        if (isEmptyIp(ip))
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        if (isEmptyIp(ip))
-            ip = request.getHeader("HTTP_CLIENT_IP");
-        if (isEmptyIp(ip))
-            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
-        if (isEmptyIp(ip))
-            ip = request.getRemoteAddr();
-        if (ip != null && ip.contains(":")) {
-            if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
-                ip = "127.0.0.1";
-            }
-        }
-        return ip;
-    }
-
-    private boolean isEmptyIp(String ip) {
-        return (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip));
     }
 
     private String getCurrentClientIp() {
