@@ -1,5 +1,6 @@
 package com.nicednb.svrgate.service;
 
+import com.nicednb.svrgate.dto.AccountDto;
 import com.nicednb.svrgate.entity.Account;
 import com.nicednb.svrgate.repository.AccountRepository;
 // import com.nicednb.svrgate.service.OperationLogService;
@@ -39,16 +40,16 @@ public class AccountService implements UserDetailsService {
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("존재하지 않는 계정입니다."));
 
-        HttpServletRequest request = ((ServletRequestAttributes)
-                RequestContextHolder.currentRequestAttributes()).getRequest();
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
+                .getRequest();
         String clientIp = getClientIpAddress(request);
 
         // IP 허용 검사
         if (!isAllowedIp(account.getAllowedLoginIps(), clientIp)) {
             operationLogService.logOperation(username, clientIp, false,
-                    "로그인",           // description: 동작 유형
+                    "로그인", // description: 동작 유형
                     "로그인 실패 - 접근이 허용되지 않은 IP", // message: 대상 계정에 대한 결과 메시지
-                    "로그인");          // 추가 분류(예: 로그 종류)
+                    "로그인"); // 추가 분류(예: 로그 종류)
             log.warn("로그인 실패 - IP 불일치 username={}, clientIp={}", username, clientIp);
             throw new BadCredentialsException("접근이 허용되지 않은 IP 주소입니다.");
         }
@@ -58,9 +59,9 @@ public class AccountService implements UserDetailsService {
         accountRepository.save(account);
 
         operationLogService.logOperation(username, clientIp, true,
-                "로그인",           // description: 동작 유형
-                "로그인 성공",      // message: 대상 계정에 대한 결과 메시지
-                "로그인");          // 추가 분류
+                "로그인", // description: 동작 유형
+                "로그인 성공", // message: 대상 계정에 대한 결과 메시지
+                "로그인"); // 추가 분류
         log.info("로그인 성공 username={}, ip={}", username, clientIp);
 
         return account;
@@ -112,6 +113,26 @@ public class AccountService implements UserDetailsService {
         }
     }
 
+    @Transactional
+    public void updateAccount(AccountDto accountDto) {
+        Account account = accountRepository.findByUsername(accountDto.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid username: " + accountDto.getUsername()));
+
+        // 기존 계정 정보 업데이트
+        account.setName(accountDto.getName());
+        account.setDepartment(accountDto.getDepartment());
+        account.setPhoneNumber(accountDto.getPhoneNumber());
+        account.setEmail(accountDto.getEmail());
+        account.setAllowedLoginIps(accountDto.getAllowedLoginIps());
+
+        // 비밀번호가 입력된 경우에만 업데이트
+        if (StringUtils.hasText(accountDto.getPassword())) {
+            account.setPassword(passwordEncoder.encode(accountDto.getPassword()));
+        }
+
+        accountRepository.save(account);
+    }
+
     public Optional<Account> findById(Long id) {
         return accountRepository.findById(id);
     }
@@ -128,11 +149,16 @@ public class AccountService implements UserDetailsService {
 
     private String getClientIpAddress(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
-        if (isEmptyIp(ip)) ip = request.getHeader("Proxy-Client-IP");
-        if (isEmptyIp(ip)) ip = request.getHeader("WL-Proxy-Client-IP");
-        if (isEmptyIp(ip)) ip = request.getHeader("HTTP_CLIENT_IP");
-        if (isEmptyIp(ip)) ip = request.getHeader("HTTP_X_FORWARDED_FOR");
-        if (isEmptyIp(ip)) ip = request.getRemoteAddr();
+        if (isEmptyIp(ip))
+            ip = request.getHeader("Proxy-Client-IP");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        if (isEmptyIp(ip))
+            ip = request.getRemoteAddr();
         if (ip != null && ip.contains(":")) {
             if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
                 ip = "127.0.0.1";
@@ -147,8 +173,8 @@ public class AccountService implements UserDetailsService {
 
     private String getCurrentClientIp() {
         try {
-            HttpServletRequest request = ((ServletRequestAttributes)
-                    RequestContextHolder.currentRequestAttributes()).getRequest();
+            HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
+                    .getRequest();
             return getClientIpAddress(request);
         } catch (Exception e) {
             return "unknown";
