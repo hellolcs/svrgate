@@ -1,10 +1,13 @@
 package com.nicednb.svrgate.config.security;
 
+import com.nicednb.svrgate.exception.IpAddressRestrictionException;
 import com.nicednb.svrgate.service.OperationLogService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
@@ -12,12 +15,16 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class CustomAuthFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
     @Autowired
     private OperationLogService operationLogService;
+    
+    private final Logger log = LoggerFactory.getLogger(CustomAuthFailureHandler.class);
 
     public CustomAuthFailureHandler() {
         // 기본 실패 URL 설정
@@ -30,6 +37,26 @@ public class CustomAuthFailureHandler extends SimpleUrlAuthenticationFailureHand
                                         AuthenticationException exception)
             throws IOException, ServletException {
 
+        String errorMessage;
+        
+        // 예외 타입에 따른 메시지 처리
+        if (exception instanceof BadCredentialsException) {
+            errorMessage = "아이디 또는 비밀번호가 일치하지 않습니다.";
+        } else if (exception instanceof IpAddressRestrictionException) {
+            errorMessage = exception.getMessage();
+        } else if (exception instanceof InternalAuthenticationServiceException) {
+            // 내부에 원인이 IpAddressRestrictionException인 경우 처리
+            if (exception.getCause() instanceof IpAddressRestrictionException) {
+                errorMessage = exception.getCause().getMessage();
+            } else {
+                errorMessage = "내부 시스템 문제로 로그인 요청을 처리할 수 없습니다.";
+                log.error("인증 중 내부 오류 발생", exception);
+            }
+        } else {
+            errorMessage = "로그인 중 오류가 발생했습니다. 관리자에게 문의하세요.";
+            log.error("인증 실패: {}", exception.getMessage(), exception);
+        }
+
         // 로그인 실패 정보 기록
         String username = request.getParameter("username");
         String clientIp = getClientIpAddress(request);
@@ -37,13 +64,13 @@ public class CustomAuthFailureHandler extends SimpleUrlAuthenticationFailureHand
                 username,
                 clientIp,
                 false,
-                exception.getMessage(),
+                errorMessage,
                 "로그인",
                 "로그인 실패"
         );
 
         // URL 인코딩을 통해 한글 메시지를 안전하게 전달
-        String encodedMsg = URLEncoder.encode(exception.getMessage(), StandardCharsets.UTF_8);
+        String encodedMsg = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
         setDefaultFailureUrl("/account/login?error=true&loginError=" + encodedMsg);
 
         super.onAuthenticationFailure(request, response, exception);

@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.BadCredentialsException;
+// import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -21,6 +21,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.nicednb.svrgate.dto.AccountDto;
 import com.nicednb.svrgate.entity.Account;
+import com.nicednb.svrgate.exception.IpAddressRestrictionException;
 import com.nicednb.svrgate.repository.AccountRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,7 +54,8 @@ public class AccountService implements UserDetailsService {
                     "로그인 실패" // 설명
             );
             log.warn("로그인 실패 - IP 불일치 username={}, clientIp={}", username, clientIp);
-            throw new BadCredentialsException("접근이 허용되지 않은 IP 주소입니다.");
+            // BadCredentialsException 대신 IpAddressRestrictionException 사용
+            throw new IpAddressRestrictionException("접근이 허용되지 않은 IP 주소입니다: " + clientIp);
         }
 
         // 로그인 성공 시각 업데이트
@@ -128,7 +130,7 @@ public class AccountService implements UserDetailsService {
     @Transactional
     public void updateAccount(AccountDto accountDto) {
         log.debug("계정 업데이트 시작: username={}", accountDto.getUsername());
-        
+
         Account account = accountRepository.findByUsername(accountDto.getUsername())
                 .orElseThrow(() -> {
                     log.warn("계정 업데이트 실패: 사용자명 없음 - {}", accountDto.getUsername());
@@ -151,7 +153,7 @@ public class AccountService implements UserDetailsService {
         }
 
         accountRepository.save(account);
-        
+
         // 변경 로깅
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         String clientIp = getCurrentClientIp();
@@ -160,12 +162,12 @@ public class AccountService implements UserDetailsService {
                 "계정관리", // 작업 유형
                 account.getUsername() + " 계정 정보 변경" // 설명
         );
-        
+
         log.info("계정 업데이트 완료: username={}", accountDto.getUsername());
     }
 
     // 나머지 메서드들...
-    
+
     private boolean isAllowedIp(String allowedLoginIps, String clientIp) {
         if (allowedLoginIps == null || allowedLoginIps.trim().isEmpty()) {
             return true;
