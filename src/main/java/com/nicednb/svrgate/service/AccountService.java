@@ -166,10 +166,16 @@ public class AccountService implements UserDetailsService {
             account.setPassword(passwordEncoder.encode(account.getPassword()));
         }
         boolean isNew = (account.getId() == null);
+        boolean passwordChanged = false;
+        if (isNew || (account.getPassword() != null && !account.getPassword().startsWith("{bcrypt}"))) {
+            account.setPassword(passwordEncoder.encode(account.getPassword()));
+            account.setLastPasswordChangeTime(LocalDateTime.now());
+            passwordChanged = true;
+        }
         Account savedAccount = accountRepository.save(account);
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         String clientIp = getCurrentClientIp();
-
+        
         if (isNew) {
             // 계정 생성 로깅 - 형식 통일
             operationLogService.logOperation(
@@ -283,5 +289,24 @@ public class AccountService implements UserDetailsService {
         );
 
         log.info("개인설정 업데이트 완료: username={}", personalSettingDto.getUsername());
+    }
+
+    /**
+     * 계정의 비밀번호 일치 여부를 확인합니다.
+     */
+    public boolean checkPassword(Account account, String rawPassword) {
+        return passwordEncoder.matches(rawPassword, account.getPassword());
+    }
+
+    /**
+     * 계정의 비밀번호를 업데이트합니다.
+     */
+    @Transactional
+    public void updatePassword(Account account, String newPassword) {
+        account.setPassword(passwordEncoder.encode(newPassword));
+        account.setLastPasswordChangeTime(LocalDateTime.now());
+        accountRepository.save(account);
+
+        log.info("비밀번호 업데이트 완료: username={}", account.getUsername());
     }
 }

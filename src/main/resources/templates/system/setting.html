@@ -5,12 +5,118 @@
 <head>
   <meta charset="UTF-8">
   <title>시스템 설정</title>
+  <style>
+    .settings-card {
+      margin-bottom: 30px;
+      border: 1px solid #002555;
+    }
+    .settings-card .card-header {
+      background-color: #002555;
+      color: white;
+      font-weight: bold;
+    }
+    .settings-form label {
+      font-weight: bold;
+    }
+    .input-group-text {
+      background-color: #f0f0f0;
+      border: 1px solid #002555;
+    }
+    .form-control {
+      border: 1px solid #002555;
+    }
+  </style>
 </head>
 <body>
 <div layout:fragment="content">
-  <div class="container mt-4" style="max-width: 1500px;">
-    <h3>시스템 설정</h3>
-    <p>시스템 관련 설정 화면입니다.</p>
+  <div class="container mt-4" style="max-width: 800px;">
+    <h2>시스템 설정</h2>
+    
+    <!-- 알림 메시지 출력 -->
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+      <span th:text="${successMessage}">성공 메시지</span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+      <span th:text="${errorMessage}">오류 메시지</span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    
+    <!-- 설정 폼 -->
+    <form th:action="@{/system/setting}" th:object="${systemSettingDto}" method="post" class="settings-form">
+      
+      <!-- 기본 설정 카드 -->
+      <div class="card settings-card">
+        <div class="card-header">
+          기본 설정
+        </div>
+        <div class="card-body">
+          <!-- 최대 유휴시간 -->
+          <div class="row mb-3">
+            <label for="maxIdleTime" class="col-sm-4 col-form-label">최대 유휴시간</label>
+            <div class="col-sm-8">
+              <div class="input-group">
+                <input type="number" id="maxIdleTime" class="form-control" th:field="*{maxIdleTime}" min="1" required>
+                <span class="input-group-text">초</span>
+              </div>
+              <div class="text-danger" th:if="${#fields.hasErrors('maxIdleTime')}" th:errors="*{maxIdleTime}"></div>
+              <small class="form-text text-muted">사용자 세션 타임아웃 시간을 설정합니다.</small>
+            </div>
+          </div>
+          
+          <!-- 패스워드 변경주기 -->
+          <div class="row mb-3">
+            <label for="passwordChangeCycle" class="col-sm-4 col-form-label">패스워드 변경주기</label>
+            <div class="col-sm-8">
+              <div class="input-group">
+                <input type="number" id="passwordChangeCycle" class="form-control" th:field="*{passwordChangeCycle}" min="1" required>
+                <span class="input-group-text">일</span>
+              </div>
+              <div class="text-danger" th:if="${#fields.hasErrors('passwordChangeCycle')}" th:errors="*{passwordChangeCycle}"></div>
+              <small class="form-text text-muted">사용자 비밀번호 변경이 필요한 주기를 설정합니다.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 연동 설정 카드 -->
+      <div class="card settings-card">
+        <div class="card-header">
+          연동 설정
+        </div>
+        <div class="card-body">
+          <!-- 정책 수집주기 -->
+          <div class="row mb-3">
+            <label for="policyCycle" class="col-sm-4 col-form-label">정책 수집주기</label>
+            <div class="col-sm-8">
+              <div class="input-group">
+                <input type="number" id="policyCycle" class="form-control" th:field="*{policyCycle}" min="1" required>
+                <span class="input-group-text">초</span>
+              </div>
+              <div class="text-danger" th:if="${#fields.hasErrors('policyCycle')}" th:errors="*{policyCycle}"></div>
+            </div>
+          </div>
+          
+          <!-- 동시 수집 서버 수 -->
+          <div class="row mb-3">
+            <label for="concurrentServers" class="col-sm-4 col-form-label">동시 수집 서버 수</label>
+            <div class="col-sm-8">
+              <div class="input-group">
+                <input type="number" id="concurrentServers" class="form-control" th:field="*{concurrentServers}" min="1" required>
+                <span class="input-group-text">개</span>
+              </div>
+              <div class="text-danger" th:if="${#fields.hasErrors('concurrentServers')}" th:errors="*{concurrentServers}"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 저장 버튼 -->
+      <div class="d-flex justify-content-center mt-4 mb-4">
+        <button type="submit" class="btn btn-primary" style="width:150px;">저장</button>
+      </div>
+    </form>
   </div>
 </div>
 </body>

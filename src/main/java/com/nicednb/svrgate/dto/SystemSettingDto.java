@@ -1,0 +1,29 @@
+package com.nicednb.svrgate.dto;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class SystemSettingDto {
+    
+    // 기본 설정
+    @NotNull(message = "최대 유휴시간을 입력해주세요.")
+    @Min(value = 1, message = "최대 유휴시간은 1 이상이어야 합니다.")
+    private Integer maxIdleTime;
+    
+    @NotNull(message = "패스워드 변경주기를 입력해주세요.")
+    @Min(value = 1, message = "패스워드 변경주기는 1 이상이어야 합니다.")
+    private Integer passwordChangeCycle;
+    
+    // 연동 설정
+    @NotNull(message = "정책 수집주기를 입력해주세요.")
+    @Min(value = 1, message = "정책 수집주기는 1 이상이어야 합니다.")
+    private Integer policyCycle;
+    
+    @NotNull(message = "동시 수집 서버 수를 입력해주세요.")
+    @Min(value = 1, message = "동시 수집 서버 수는 1 이상이어야 합니다.")
+    private Integer concurrentServers;
+}

@@ -4,11 +4,11 @@ import com.nicednb.svrgate.config.security.CustomAuthFailureHandler;
 import com.nicednb.svrgate.config.security.CustomDaoAuthenticationProvider;
 import com.nicednb.svrgate.service.AccountService;
 import com.nicednb.svrgate.service.OperationLogService;
+import com.nicednb.svrgate.service.SystemSettingService;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-// import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,6 +16,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -26,11 +27,12 @@ import org.slf4j.LoggerFactory;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
- private final UserDetailsService userDetailsService;
+    private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final CustomAuthFailureHandler customAuthFailureHandler;
     private final AccountService accountService;
     private final OperationLogService operationLogService;
+    private final SystemSettingService systemSettingService;
     private final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Bean
@@ -50,6 +52,11 @@ public class SecurityConfig {
         AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
         authBuilder.authenticationProvider(customDaoAuthenticationProvider());
         return authBuilder.build();
+    }
+    
+    @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
     }
 
     @Bean
@@ -83,7 +90,17 @@ public class SecurityConfig {
                         .authenticationEntryPoint(
                                 new org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint("/account/login")
                         )
-                );
+                )
+                .sessionManagement(session -> {
+                    // 시스템 설정의 최대 유휴시간을 초 단위로 설정
+                    int maxIdleTimeSeconds = systemSettingService.getMaxIdleTime();
+                    log.info("세션 최대 유휴시간 설정: {} 초", maxIdleTimeSeconds);
+                    session.maximumSessions(1)
+                          .expiredUrl("/account/login?expired");
+                    session.invalidSessionUrl("/account/login?invalid");
+                    // 세션 타임아웃 설정
+                    session.sessionFixation().newSession();
+                });
 
         return http.build();
     }
