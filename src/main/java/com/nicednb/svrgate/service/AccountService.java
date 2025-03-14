@@ -1,10 +1,11 @@
 package com.nicednb.svrgate.service;
 
-import com.nicednb.svrgate.dto.AccountDto;
-import com.nicednb.svrgate.entity.Account;
-import com.nicednb.svrgate.repository.AccountRepository;
-// import com.nicednb.svrgate.service.OperationLogService;
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -14,16 +15,17 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import com.nicednb.svrgate.dto.AccountDto;
+import com.nicednb.svrgate.entity.Account;
+import com.nicednb.svrgate.repository.AccountRepository;
+
+import jakarta.servlet.http.HttpServletRequest;
+// import com.nicednb.svrgate.service.OperationLogService;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +67,12 @@ public class AccountService implements UserDetailsService {
         log.info("로그인 성공 username={}, ip={}", username, clientIp);
 
         return account;
+    }
+
+    @Transactional(readOnly = true)
+    public Account findByUsername(String username) {
+        return accountRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("계정을 찾을 수 없습니다: " + username));
     }
 
     // 계정 생성/변경: 비밀번호 인코딩 처리 후 저장하고 로깅 처리

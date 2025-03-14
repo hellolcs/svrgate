@@ -4,6 +4,8 @@ import com.nicednb.svrgate.dto.AccountDto;
 import com.nicednb.svrgate.entity.Account;
 import com.nicednb.svrgate.service.AccountService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 // import org.springframework.security.core.Authentication;
 // import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -62,26 +64,29 @@ public class UserController {
         return "redirect:/system/user";
     }
 
-    // 사용자 변경 처리 (예시)
     @PostMapping("/update")
     public String updateUser(@ModelAttribute AccountDto accountDto) {
-        // 기존 계정을 먼저 조회
-        Account existingAccount = accountService.findByUsername(accountDto.getUsername());
-        if (existingAccount != null) {
+        try {
+            // 기존 계정을 먼저 조회
+            Account existingAccount = accountService.findByUsername(accountDto.getUsername());
+
             // 필드 업데이트
             existingAccount.setName(accountDto.getName());
             existingAccount.setDepartment(accountDto.getDepartment());
             existingAccount.setPhoneNumber(accountDto.getPhoneNumber());
             existingAccount.setEmail(accountDto.getEmail());
             existingAccount.setAllowedLoginIps(accountDto.getAllowedLoginIps());
-            
+
             // 비밀번호가 제공된 경우에만 업데이트
             if (accountDto.getPassword() != null && !accountDto.getPassword().isEmpty()) {
                 existingAccount.setPassword(accountDto.getPassword());
             }
-            
+
             accountService.saveAccount(existingAccount);
+            return "redirect:/system/user";
+        } catch (UsernameNotFoundException e) {
+            // 오류 처리
+            return "redirect:/system/user?error=user_not_found";
         }
-        return "redirect:/system/user";
     }
 }
