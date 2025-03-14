@@ -99,7 +99,6 @@ public class UserController {
     public String updateUser(@ModelAttribute AccountDto accountDto, RedirectAttributes redirectAttributes) {
         log.info("사용자 업데이트 요청: {}", accountDto.getUsername());
         try {
-            // 기존 updateAccount 함수 활용
             accountService.updateAccount(accountDto);
             log.info("사용자 업데이트 성공: {}", accountDto.getUsername());
             redirectAttributes.addFlashAttribute("successMessage", "사용자 정보가 성공적으로 업데이트되었습니다.");

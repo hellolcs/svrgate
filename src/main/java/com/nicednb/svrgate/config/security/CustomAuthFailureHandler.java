@@ -80,8 +80,7 @@ public class CustomAuthFailureHandler extends SimpleUrlAuthenticationFailureHand
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
-
-                String ip = request.getHeader("X-Forwarded-For");
+        String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getHeader("Proxy-Client-IP");
         }

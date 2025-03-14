@@ -3,10 +3,12 @@ package com.nicednb.svrgate.service;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -19,10 +21,12 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.nicednb.svrgate.dto.AccountDto;
 import com.nicednb.svrgate.entity.Account;
+import com.nicednb.svrgate.exception.IpAddressRestrictionException;
 import com.nicednb.svrgate.repository.AccountRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+
 @Service
 @RequiredArgsConstructor
 public class AccountService implements UserDetailsService {
@@ -31,7 +35,6 @@ public class AccountService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final OperationLogService operationLogService;
     private final Logger log = LoggerFactory.getLogger(AccountService.class);
-
 
     @Override
     @Transactional
@@ -88,59 +91,6 @@ public class AccountService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("계정을 찾을 수 없습니다: " + username));
     }
 
-    private String getClientIpAddress(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (isEmptyIp(ip))
-            ip = request.getHeader("Proxy-Client-IP");
-        if (isEmptyIp(ip))
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        if (isEmptyIp(ip))
-            ip = request.getHeader("HTTP_CLIENT_IP");
-        if (isEmptyIp(ip))
-            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
-        if (isEmptyIp(ip))
-            ip = request.getRemoteAddr();
-        if (ip != null && ip.contains(":")) {
-            if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
-                ip = "127.0.0.1";
-            }
-        }
-        return ip;
-    }
-
-    private boolean isEmptyIp(String ip) {
-        return (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip));
-    }
-
-    
-    // 계정 생성/변경: 비밀번호 인코딩 처리 후 저장하고 로깅 처리
-    @Transactional
-    public Account saveAccount(Account account) {
-        if (!account.getPassword().startsWith("{bcrypt}")) {
-            account.setPassword(passwordEncoder.encode(account.getPassword()));
-        }
-        boolean isNew = (account.getId() == null);
-        Account savedAccount = accountRepository.save(account);
-        String actor = SecurityContextHolder.getContext().getAuthentication().getName();
-        String clientIp = getCurrentClientIp();
-        if (isNew) {
-            operationLogService.logOperation(actor, clientIp, true,
-                    null, // 성공이므로 실패 사유 없음
-                    "계정관리", // 작업 유형
-                    savedAccount.getUsername() + " 계정 생성" // 설명
-            );
-            log.info("계정 추가: actor={}, target={}", actor, savedAccount.getUsername());
-        } else {
-            operationLogService.logOperation(actor, clientIp, true,
-                    null, // 성공이므로 실패 사유 없음
-                    "계정관리", // 작업 유형
-                    savedAccount.getUsername() + " 계정 변경" // 설명
-            );
-            log.info("계정 변경: actor={}, target={}", actor, savedAccount.getUsername());
-        }
-        return savedAccount;
-    }
-
     /**
      * 사용자명으로 계정을 삭제합니다.
      */
@@ -152,18 +102,24 @@ public class AccountService implements UserDetailsService {
         accountRepository.delete(account);
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         String clientIp = getCurrentClientIp();
-        operationLogService.logOperation(actor, clientIp, true,
-                null, // 성공이므로 실패 사유 없음
-                "계정관리", // 작업 유형
-                username + " 계정 삭제" // 설명
+        
+        // 로그 메시지 형식 통일: failReason에 대상 정보를 포함
+        operationLogService.logOperation(
+                actor,             // 작업 수행자
+                clientIp,          // IP 주소
+                true,              // 성공 여부
+                "대상: " + username, // 대상 정보를 failReason 필드에 기록
+                "계정관리",          // 작업 유형
+                "계정 삭제"          // 간결한 설명
         );
+        
         log.info("계정 삭제: actor={}, target={}", actor, username);
     }
-    
+
     @Transactional
     public void updateAccount(AccountDto accountDto) {
         log.debug("계정 업데이트 시작: username={}", accountDto.getUsername());
-
+        
         Account account = accountRepository.findByUsername(accountDto.getUsername())
                 .orElseThrow(() -> {
                     log.warn("계정 업데이트 실패: 사용자명 없음 - {}", accountDto.getUsername());
@@ -186,17 +142,81 @@ public class AccountService implements UserDetailsService {
         }
 
         accountRepository.save(account);
-
-        // 변경 로깅
+        
+        // 변경 로깅 - 형식 통일
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         String clientIp = getCurrentClientIp();
-        operationLogService.logOperation(actor, clientIp, true,
-                null, // 성공이므로 실패 사유 없음
-                "계정관리", // 작업 유형
-                account.getUsername() + " 계정 정보 변경" // 설명
+        operationLogService.logOperation(
+                actor,                     // 작업 수행자
+                clientIp,                  // IP 주소
+                true,                      // 성공 여부
+                "대상: " + account.getUsername(), // 대상 정보를 failReason 필드에 기록
+                "계정관리",                  // 작업 유형
+                "계정 정보 변경"              // 간결한 설명
         );
-
+        
         log.info("계정 업데이트 완료: username={}", accountDto.getUsername());
+    }
+
+    @Transactional
+    public Account saveAccount(Account account) {
+        if (!account.getPassword().startsWith("{bcrypt}")) {
+            account.setPassword(passwordEncoder.encode(account.getPassword()));
+        }
+        boolean isNew = (account.getId() == null);
+        Account savedAccount = accountRepository.save(account);
+        String actor = SecurityContextHolder.getContext().getAuthentication().getName();
+        String clientIp = getCurrentClientIp();
+        
+        if (isNew) {
+            // 계정 생성 로깅 - 형식 통일
+            operationLogService.logOperation(
+                    actor,                         // 작업 수행자
+                    clientIp,                      // IP 주소
+                    true,                          // 성공 여부
+                    "대상: " + savedAccount.getUsername(), // 대상 정보를 failReason 필드에 기록
+                    "계정관리",                      // 작업 유형
+                    "계정 생성"                      // 간결한 설명
+            );
+            log.info("계정 추가: actor={}, target={}", actor, savedAccount.getUsername());
+        } else {
+            // 계정 변경 로깅 - 형식 통일
+            operationLogService.logOperation(
+                    actor,                         // 작업 수행자
+                    clientIp,                      // IP 주소
+                    true,                          // 성공 여부
+                    "대상: " + savedAccount.getUsername(), // 대상 정보를 failReason 필드에 기록
+                    "계정관리",                      // 작업 유형
+                    "계정 정보 변경"                  // 간결한 설명
+            );
+            log.info("계정 변경: actor={}, target={}", actor, savedAccount.getUsername());
+        }
+        
+        return savedAccount;
+    }
+
+    public String getClientIpAddress(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("Proxy-Client-IP");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        if (isEmptyIp(ip))
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        if (isEmptyIp(ip))
+            ip = request.getRemoteAddr();
+        if (ip != null && ip.contains(":")) {
+            if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
+                ip = "127.0.0.1";
+            }
+        }
+        return ip;
+    }
+
+    private boolean isEmptyIp(String ip) {
+        return (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip));
     }
 
     private String getCurrentClientIp() {
