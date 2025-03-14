@@ -1,19 +1,24 @@
 package com.nicednb.svrgate.controller.system;
 
-import com.nicednb.svrgate.dto.AccountDto;
-import com.nicednb.svrgate.entity.Account;
-import com.nicednb.svrgate.service.AccountService;
-import lombok.RequiredArgsConstructor;
-
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 // import org.springframework.security.core.Authentication;
 // import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.nicednb.svrgate.dto.AccountDto;
+import com.nicednb.svrgate.entity.Account;
+import com.nicednb.svrgate.service.AccountService;
+
 import jakarta.validation.Valid;
 // import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 
 @Controller
 @RequiredArgsConstructor
@@ -67,26 +72,13 @@ public class UserController {
     @PostMapping("/update")
     public String updateUser(@ModelAttribute AccountDto accountDto) {
         try {
-            // 기존 계정을 먼저 조회
-            Account existingAccount = accountService.findByUsername(accountDto.getUsername());
-
-            // 필드 업데이트
-            existingAccount.setName(accountDto.getName());
-            existingAccount.setDepartment(accountDto.getDepartment());
-            existingAccount.setPhoneNumber(accountDto.getPhoneNumber());
-            existingAccount.setEmail(accountDto.getEmail());
-            existingAccount.setAllowedLoginIps(accountDto.getAllowedLoginIps());
-
-            // 비밀번호가 제공된 경우에만 업데이트
-            if (accountDto.getPassword() != null && !accountDto.getPassword().isEmpty()) {
-                existingAccount.setPassword(accountDto.getPassword());
-            }
-
-            accountService.saveAccount(existingAccount);
+            // 기존 updateAccount 함수 활용
+            accountService.updateAccount(accountDto);
             return "redirect:/system/user";
-        } catch (UsernameNotFoundException e) {
-            // 오류 처리
-            return "redirect:/system/user?error=user_not_found";
+        } catch (Exception e) {
+            // 오류 로깅
+            log.error("사용자 업데이트 중 오류 발생: {}", e.getMessage());
+            return "redirect:/system/user?error=update_failed";
         }
     }
 }
