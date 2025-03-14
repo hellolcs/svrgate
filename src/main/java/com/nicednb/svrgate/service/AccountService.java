@@ -3,12 +3,10 @@ package com.nicednb.svrgate.service;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-// import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -21,7 +19,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.nicednb.svrgate.dto.AccountDto;
 import com.nicednb.svrgate.entity.Account;
-// import com.nicednb.svrgate.exception.IpAddressRestrictionException;
 import com.nicednb.svrgate.repository.AccountRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -144,27 +141,25 @@ public class AccountService implements UserDetailsService {
         return savedAccount;
     }
 
-    // 계정 삭제: 삭제 전 대상 계정 조회 후 삭제 및 로깅 처리
+    /**
+     * 사용자명으로 계정을 삭제합니다.
+     */
     @Transactional
-    public void deleteAccount(Long id) {
-        Optional<Account> accountOpt = accountRepository.findById(id);
-        if (accountOpt.isPresent()) {
-            String targetUsername = accountOpt.get().getUsername();
-            accountRepository.deleteById(id);
-            String actor = SecurityContextHolder.getContext().getAuthentication().getName();
-            String clientIp = getCurrentClientIp();
-            operationLogService.logOperation(actor, clientIp, true,
-                    null, // 성공이므로 실패 사유 없음
-                    "계정관리", // 작업 유형
-                    targetUsername + " 계정 삭제" // 설명
-            );
-            log.info("계정 삭제: actor={}, target={}", actor, targetUsername);
-        } else {
-            log.warn("삭제할 계정을 찾을 수 없음: id={}", id);
-            throw new UsernameNotFoundException("삭제할 계정을 찾을 수 없습니다: " + id);
-        }
+    public void deleteAccountByUsername(String username) {
+        Account account = accountRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("삭제할 계정을 찾을 수 없습니다: " + username));
+        
+        accountRepository.delete(account);
+        String actor = SecurityContextHolder.getContext().getAuthentication().getName();
+        String clientIp = getCurrentClientIp();
+        operationLogService.logOperation(actor, clientIp, true,
+                null, // 성공이므로 실패 사유 없음
+                "계정관리", // 작업 유형
+                username + " 계정 삭제" // 설명
+        );
+        log.info("계정 삭제: actor={}, target={}", actor, username);
     }
-
+    
     @Transactional
     public void updateAccount(AccountDto accountDto) {
         log.debug("계정 업데이트 시작: username={}", accountDto.getUsername());

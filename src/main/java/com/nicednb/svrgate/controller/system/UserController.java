@@ -81,11 +81,11 @@ public class UserController {
     }
 
     @PostMapping("/delete")
-    public String deleteUser(@RequestParam("userId") Long userId, RedirectAttributes redirectAttributes) {
-        log.info("사용자 삭제 요청: ID={}", userId);
+    public String deleteUser(@RequestParam("userId") String username, RedirectAttributes redirectAttributes) {
+        log.info("사용자 삭제 요청: username={}", username);
         try {
-            accountService.deleteAccount(userId);
-            log.info("사용자 삭제 성공: ID={}", userId);
+            accountService.deleteAccountByUsername(username);
+            log.info("사용자 삭제 성공: username={}", username);
             redirectAttributes.addFlashAttribute("successMessage", "사용자가 성공적으로 삭제되었습니다.");
             return "redirect:/system/user";
         } catch (Exception e) {
