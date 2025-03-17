@@ -94,10 +94,6 @@ public class PasswordChangeController {
             // 비밀번호 업데이트
             accountService.updatePassword(account, passwordChangeDto.getNewPassword());
 
-            // 비밀번호 변경 시간 업데이트
-            account.setLastPasswordChangeTime(LocalDateTime.now());
-            accountService.saveAccount(account);
-
             // 성공 로그 남기기
             String ipAddress = accountService.getClientIpAddress(request);
             operationLogService.logOperation(
