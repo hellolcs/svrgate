@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
  */
 @Controller
 @RequestMapping("/object")
-public class ObjectMenuController {
+public class ObjectController {
 
-    private final Logger log = LoggerFactory.getLogger(ObjectMenuController.class);
+    private final Logger log = LoggerFactory.getLogger(ObjectController.class);
 
     /**
      * 객체관리 메인 페이지 - 기본적으로 연동서버객체 페이지로 리다이렉트
