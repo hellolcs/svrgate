@@ -129,19 +129,32 @@ public class AccountService implements UserDetailsService {
         return PasswordValidator.isValid(password);
     }
 
+    /**
+     * 비밀번호 규칙 설명 반환
+     */
+    public String getPasswordRules() {
+        return PasswordValidator.getPasswordRules();
+    }
 
     /**
      * 계정 정보 업데이트 - 비밀번호 유효성 검사 추가
+     * exception 대신 boolean 반환으로 변경
      */
     @Transactional
-    public void updateAccount(AccountDto accountDto) throws IllegalArgumentException {
+    public boolean updateAccount(AccountDto accountDto, StringBuilder errorMessage) {
         log.debug("계정 업데이트 시작: username={}", accountDto.getUsername());
 
-        Account account = accountRepository.findByUsername(accountDto.getUsername())
-                .orElseThrow(() -> {
-                    log.warn("계정 업데이트 실패: 사용자명 없음 - {}", accountDto.getUsername());
-                    return new IllegalArgumentException("존재하지 않는 사용자명: " + accountDto.getUsername());
-                });
+        Account account;
+        try {
+            account = accountRepository.findByUsername(accountDto.getUsername())
+                    .orElseThrow(() -> {
+                        log.warn("계정 업데이트 실패: 사용자명 없음 - {}", accountDto.getUsername());
+                        return new IllegalArgumentException("존재하지 않는 사용자명: " + accountDto.getUsername());
+                    });
+        } catch (Exception e) {
+            errorMessage.append(e.getMessage());
+            return false;
+        }
 
         // 기존 계정 정보 업데이트
         account.setName(accountDto.getName());
@@ -157,7 +170,8 @@ public class AccountService implements UserDetailsService {
             // 비밀번호 규칙 검증
             if (!validatePassword(accountDto.getPassword())) {
                 log.warn("계정 업데이트 실패: 비밀번호가 규칙에 맞지 않음 - {}", accountDto.getUsername());
-                throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+                errorMessage.append(getPasswordRules());
+                return false;
             }
             
             account.setPassword(passwordEncoder.encode(accountDto.getPassword()));
@@ -181,19 +195,21 @@ public class AccountService implements UserDetailsService {
         );
 
         log.info("계정 업데이트 완료: username={}", accountDto.getUsername());
+        return true;
     }
 
     /**
-     * 사용자 계정 저장 - 비밀번호 유효성 검사 추가
+     * 사용자 계정 저장 - exception 대신 boolean 반환으로 변경
      */
     @Transactional
-    public Account saveAccount(Account account) throws IllegalArgumentException {
+    public boolean saveAccount(Account account, StringBuilder errorMessage) {
         // 새 계정 또는 비밀번호 변경 시 검증
         if (account.getId() == null || (account.getPassword() != null && !account.getPassword().startsWith("{bcrypt}"))) {
             // 비밀번호 규칙 검증
             if (!validatePassword(account.getPassword())) {
                 log.warn("계정 저장 실패: 비밀번호가 규칙에 맞지 않음 - {}", account.getUsername());
-                throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+                errorMessage.append(getPasswordRules());
+                return false;
             }
             
             account.setPassword(passwordEncoder.encode(account.getPassword()));
@@ -229,7 +245,7 @@ public class AccountService implements UserDetailsService {
             log.info("계정 변경: actor={}, target={}", actor, savedAccount.getUsername());
         }
 
-        return savedAccount;
+        return true;
     }
 
     public String getClientIpAddress(HttpServletRequest request) {
@@ -278,18 +294,24 @@ public class AccountService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("계정을 찾을 수 없습니다: " + id));
     }
 
-    /**
-     * 개인 설정 업데이트 - 비밀번호 유효성 검사 추가
+   /**
+     * 개인 설정 업데이트 - exception 대신 boolean 반환으로 변경
      */
     @Transactional
-    public void updatePersonalSetting(PersonalSettingDto personalSettingDto) throws IllegalArgumentException {
+    public boolean updatePersonalSetting(PersonalSettingDto personalSettingDto, StringBuilder errorMessage) {
         log.debug("개인설정 업데이트 시작: username={}", personalSettingDto.getUsername());
 
-        Account account = accountRepository.findByUsername(personalSettingDto.getUsername())
-                .orElseThrow(() -> {
-                    log.warn("계정 업데이트 실패: 사용자명 없음 - {}", personalSettingDto.getUsername());
-                    return new IllegalArgumentException("존재하지 않는 사용자명: " + personalSettingDto.getUsername());
-                });
+        Account account;
+        try {
+            account = accountRepository.findByUsername(personalSettingDto.getUsername())
+                    .orElseThrow(() -> {
+                        log.warn("계정 업데이트 실패: 사용자명 없음 - {}", personalSettingDto.getUsername());
+                        return new IllegalArgumentException("존재하지 않는 사용자명: " + personalSettingDto.getUsername());
+                    });
+        } catch (Exception e) {
+            errorMessage.append(e.getMessage());
+            return false;
+        }
 
         // 기존 계정 정보 업데이트
         account.setName(personalSettingDto.getName());
@@ -305,7 +327,8 @@ public class AccountService implements UserDetailsService {
             // 비밀번호 규칙 검증
             if (!validatePassword(personalSettingDto.getPassword())) {
                 log.warn("개인설정 업데이트 실패: 비밀번호가 규칙에 맞지 않음 - {}", personalSettingDto.getUsername());
-                throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+                errorMessage.append(getPasswordRules());
+                return false;
             }
             
             account.setPassword(passwordEncoder.encode(personalSettingDto.getPassword()));
@@ -329,6 +352,7 @@ public class AccountService implements UserDetailsService {
         );
 
         log.info("개인설정 업데이트 완료: username={}", personalSettingDto.getUsername());
+        return true;
     }
 
     /**
@@ -339,14 +363,15 @@ public class AccountService implements UserDetailsService {
     }
 
    /**
-     * 계정의 비밀번호를 업데이트합니다. - 비밀번호 유효성 검사 추가
+     * 계정의 비밀번호를 업데이트합니다. - exception 대신 boolean 반환으로 변경
      */
     @Transactional
-    public void updatePassword(Account account, String newPassword) throws IllegalArgumentException {
+    public boolean updatePassword(Account account, String newPassword, StringBuilder errorMessage) {
         // 비밀번호 규칙 검증
         if (!validatePassword(newPassword)) {
             log.warn("비밀번호 업데이트 실패: 비밀번호가 규칙에 맞지 않음 - {}", account.getUsername());
-            throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+            errorMessage.append(getPasswordRules());
+            return false;
         }
         
         account.setPassword(passwordEncoder.encode(newPassword));
@@ -354,5 +379,6 @@ public class AccountService implements UserDetailsService {
         accountRepository.save(account);
 
         log.info("비밀번호 업데이트 완료: username={}", account.getUsername());
+        return true;
     }
 }

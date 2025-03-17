@@ -87,18 +87,15 @@ public class PersonalSettingController {
             }
         }
         
-        try {
-            // 계정 업데이트
-            accountService.updatePersonalSetting(personalSettingDto);
-            
+        StringBuilder errorMessage = new StringBuilder();
+        if (accountService.updatePersonalSetting(personalSettingDto, errorMessage)) {
             // 성공 메시지 설정
             log.info("개인설정 업데이트 성공: {}", personalSettingDto.getUsername());
             redirectAttributes.addFlashAttribute("successMessage", "개인설정이 성공적으로 업데이트되었습니다.");
-            
             return "redirect:/account/personal";
-        } catch (IllegalArgumentException e) {
-            log.error("개인설정 업데이트 중 오류 발생: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        } else {
+            log.warn("개인설정 업데이트 실패: {}", errorMessage);
+            redirectAttributes.addFlashAttribute("errorMessage", errorMessage.toString());
             return "redirect:/account/personal";
         }
     }

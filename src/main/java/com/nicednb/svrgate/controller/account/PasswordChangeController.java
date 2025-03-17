@@ -57,71 +57,83 @@ public class PasswordChangeController {
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
         log.info("비밀번호 변경 요청: {}", passwordChangeDto.getUsername());
-
+    
         if (bindingResult.hasErrors()) {
             log.warn("비밀번호 변경 폼 유효성 검사 실패: {}", bindingResult.getAllErrors());
             return "account/password-change";
         }
-
+    
         // 현재 인증된 사용자 확인
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = auth.getName();
-
+    
         if (!currentUsername.equals(passwordChangeDto.getUsername())) {
             log.warn("비밀번호 변경 실패: 인증된 사용자({})와 요청 사용자({})가 일치하지 않음",
                     currentUsername, passwordChangeDto.getUsername());
             redirectAttributes.addFlashAttribute("errorMessage", "자신의 비밀번호만 변경할 수 있습니다.");
             return "redirect:/account/password-change";
         }
-
+    
         // 비밀번호 일치 여부 확인
         if (!passwordChangeDto.getNewPassword().equals(passwordChangeDto.getNewPasswordConfirm())) {
             log.warn("비밀번호 변경 실패: 새 비밀번호 불일치");
             redirectAttributes.addFlashAttribute("errorMessage", "새 비밀번호가 일치하지 않습니다.");
             return "redirect:/account/password-change";
         }
-
+    
         try {
             // 현재 비밀번호 확인 및 비밀번호 변경
             Account account = accountService.findByUsername(currentUsername);
-
+    
             if (!accountService.checkPassword(account, passwordChangeDto.getCurrentPassword())) {
                 log.warn("비밀번호 변경 실패: 현재 비밀번호 불일치");
                 redirectAttributes.addFlashAttribute("errorMessage", "현재 비밀번호가 일치하지 않습니다.");
                 return "redirect:/account/password-change";
             }
-
-            // updatePassword 메서드 호출 - 비밀번호 규칙 검증이 여기서 수행됨
-            accountService.updatePassword(account, passwordChangeDto.getNewPassword());
-
-            // 성공 로그 남기기
-            String ipAddress = accountService.getClientIpAddress(request);
-            operationLogService.logOperation(
-                    currentUsername,
-                    ipAddress,
-                    true,
-                    null,
-                    "계정관리",
-                    "비밀번호 변경");
-
-            log.info("비밀번호 변경 성공: {}", currentUsername);
-            redirectAttributes.addFlashAttribute("successMessage", "비밀번호가 성공적으로 변경되었습니다.");
-
-            // 인증 객체 업데이트를 위해 로그아웃 처리
-            SecurityContextHolder.clearContext();
-            request.getSession().invalidate();
-
-            // 새로운 세션 생성
-            if (request.getSession(false) == null) {
-                request.getSession(true);
+    
+            // 비밀번호 업데이트
+            StringBuilder errorMessage = new StringBuilder();
+            if (accountService.updatePassword(account, passwordChangeDto.getNewPassword(), errorMessage)) {
+                // 성공 로그 남기기
+                String ipAddress = accountService.getClientIpAddress(request);
+                operationLogService.logOperation(
+                        currentUsername,
+                        ipAddress,
+                        true,
+                        null,
+                        "계정관리",
+                        "비밀번호 변경");
+    
+                log.info("비밀번호 변경 성공: {}", currentUsername);
+                redirectAttributes.addFlashAttribute("successMessage", "비밀번호가 성공적으로 변경되었습니다.");
+    
+                // 인증 객체 업데이트를 위해 로그아웃 처리
+                SecurityContextHolder.clearContext();
+                request.getSession().invalidate();
+    
+                // 새로운 세션 생성
+                if (request.getSession(false) == null) {
+                    request.getSession(true);
+                }
+    
+                // 로그인 페이지로 리다이렉트
+                return "redirect:/account/login?passwordChanged=true";
+            } else {
+                log.warn("비밀번호 변경 실패: {}", errorMessage);
+                
+                // 실패 로그 남기기
+                String ipAddress = accountService.getClientIpAddress(request);
+                operationLogService.logOperation(
+                        currentUsername,
+                        ipAddress,
+                        false,
+                        errorMessage.toString(),
+                        "계정관리",
+                        "비밀번호 변경");
+                    
+                redirectAttributes.addFlashAttribute("errorMessage", errorMessage.toString());
+                return "redirect:/account/password-change";
             }
-
-            // 로그인 페이지로 리다이렉트
-            return "redirect:/account/login?passwordChanged=true";
-        } catch (IllegalArgumentException e) {
-            log.error("비밀번호 변경 중 오류 발생: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/account/password-change";
         } catch (Exception e) {
             log.error("비밀번호 변경 중 오류 발생: {}", e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "비밀번호 변경 중 오류가 발생했습니다: " + e.getMessage());

@@ -77,9 +77,8 @@
         </div>
         <div class="modal-body">
           <!-- 모달 내 알림 메시지 영역 -->
-          <div id="addModalAlert" class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none;">
-            <span id="addModalAlertText"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          <div id="addModalAlert" class="alert alert-danger mb-3" style="display: none;">
+            <strong>오류:</strong> <span id="addModalAlertText"></span>
           </div>
           
           <!-- 비밀번호 규칙 안내 -->
@@ -168,9 +167,8 @@
         </div>
         <div class="modal-body">
           <!-- 모달 내 알림 메시지 영역 -->
-          <div id="updateModalAlert" class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none;">
-            <span id="updateModalAlertText"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          <div id="updateModalAlert" class="alert alert-danger mb-3" style="display: none;">
+            <strong>오류:</strong> <span id="updateModalAlertText"></span>
           </div>
           
           <!-- 비밀번호 규칙 안내 -->
@@ -259,106 +257,113 @@
   </form>
 
   <!-- 인라인 스크립트 -->
-  <!-- 인라인 스크립트 -->
-<script th:inline="javascript">
-  /*<![CDATA[*/
-  // 페이지 로드 시 세션 데이터 확인 및 처리
-  document.addEventListener("DOMContentLoaded", function() {
-      // 서버에서 전달된 세션 속성 확인
-      var modalType = [[${session.modalType}]];
-      var modalError = [[${session.modalError}]];
-      var selectedUsername = [[${session.selectedUsername}]];
-      
-      // 세션에서 값이 있는 경우 처리
-      if (modalType && modalError) {
-          if (modalType === 'add') {
-              // 계정 추가 모달 오류 표시
-              var addModal = new bootstrap.Modal(document.getElementById('addUserModal'));
-              document.getElementById('addModalAlertText').textContent = modalError;
-              document.getElementById('addModalAlert').style.display = 'block';
-              addModal.show();
-          } else if (modalType === 'update') {
-              // 계정 변경 모달 오류 표시
-              var updateModal = new bootstrap.Modal(document.getElementById('updateUserModal'));
-              document.getElementById('updateModalAlertText').textContent = modalError;
-              document.getElementById('updateModalAlert').style.display = 'block';
-              
-              // 선택된 사용자가 있으면 선택
-              if (selectedUsername) {
-                  // 해당 사용자의 행 찾기
-                  var rows = document.querySelectorAll('.table-custom tbody tr');
-                  for (var i = 0; i < rows.length; i++) {
-                      if (rows[i].getAttribute('data-username') === selectedUsername) {
-                          selectRow(rows[i]);
-                          break;
-                      }
-                  }
-              }
-              
-              updateModal.show();
-          }
+  <script th:inline="javascript">
+    /*<![CDATA[*/
+    // 페이지 로드 시 모달 및 알림 처리
+    document.addEventListener("DOMContentLoaded", function() {
+        // 모델에서 데이터 가져오기
+        var modalType = /*[[${modalType}]]*/ null;
+        var modalError = /*[[${modalError}]]*/ null;
+        var selectedUsername = /*[[${selectedUsername}]]*/ null;
+        
+        console.log("모달 정보:", modalType, modalError); // 디버깅용
+        
+        if (modalType && modalError) {
+            if (modalType === 'add') {
+                console.log("계정 추가 모달 표시");
+                // 계정 추가 모달 오류 표시 및 열기
+                var addModal = new bootstrap.Modal(document.getElementById('addUserModal'));
+                document.getElementById('addModalAlertText').textContent = modalError;
+                document.getElementById('addModalAlert').style.display = 'block';
+                setTimeout(function() {
+                    addModal.show();
+                }, 100);
+            } else if (modalType === 'update') {
+                console.log("계정 변경 모달 표시");
+                // 계정 변경 모달 오류 표시 및 열기
+                var updateModal = new bootstrap.Modal(document.getElementById('updateUserModal'));
+                document.getElementById('updateModalAlertText').textContent = modalError;
+                document.getElementById('updateModalAlert').style.display = 'block';
+                
+                // 선택된 사용자가 있으면 선택
+                if (selectedUsername) {
+                    console.log("선택된 사용자:", selectedUsername);
+                    // 해당 사용자의 행 찾기
+                    var rows = document.querySelectorAll('.table-custom tbody tr');
+                    for (var i = 0; i < rows.length; i++) {
+                        if (rows[i].getAttribute('data-username') === selectedUsername) {
+                            selectRow(rows[i]);
+                            break;
+                        }
+                    }
+                }
+                
+                setTimeout(function() {
+                    updateModal.show();
+                }, 100);
+            }
+        }
+        
+        document.getElementById('deleteUserBtn').addEventListener('click', deleteUser);
+        document.getElementById('updateUserBtn').addEventListener('click', updateUser);
+    });
+    
+    function setFieldValue(form, fieldName, value) {
+      if(form.elements[fieldName]) {
+        form.elements[fieldName].value = value;
+      } else {
+        console.warn("Field '" + fieldName + "' not found in updateUserForm");
+      }
+    }
+
+    let selectedUsername = null;
+    
+    function selectRow(row) {
+      // 모든 행에서 선택 스타일 제거
+      document.querySelectorAll('.table-custom tbody tr')
+        .forEach(r => r.classList.remove('table-primary'));
+      // 현재 행 스타일 적용
+      row.classList.add('table-primary');
+
+      // username(= PK)을 data-username 속성에서 읽어옴
+      selectedUsername = row.getAttribute('data-username');
+      document.getElementById('deleteUserBtn').disabled = false;
+      document.getElementById('updateUserBtn').disabled = false;
+      document.getElementById('displayUsername').textContent = row.getAttribute('data-username');
+
+      const updateForm = document.getElementById('updateUserForm');
+      setFieldValue(updateForm, 'username', row.getAttribute('data-username'));
+      setFieldValue(updateForm, 'name', row.getAttribute('data-name'));
+      setFieldValue(updateForm, 'department', row.getAttribute('data-department'));
+      setFieldValue(updateForm, 'phoneNumber', row.getAttribute('data-phone'));
+      setFieldValue(updateForm, 'email', row.getAttribute('data-email'));
+      setFieldValue(updateForm, 'allowedLoginIps', row.getAttribute('data-allowedips'));
+      // 비밀번호 필드는 비워둠
+      setFieldValue(updateForm, 'password', '');
+      setFieldValue(updateForm, 'passwordConfirm', '');
+    }
+    
+    function deleteUser() {
+      if (selectedUsername && confirm("정말로 선택된 사용자를 삭제하시겠습니까?")) {
+        document.getElementById('deleteUserId').value = selectedUsername;
+        document.getElementById('deleteForm').submit();
+      }
+    }
+    
+    function updateUser() {
+      if (!selectedUsername) {
+        alert("변경할 사용자를 먼저 선택해주세요.");
+        return;
       }
       
-      document.getElementById('deleteUserBtn').addEventListener('click', deleteUser);
-      document.getElementById('updateUserBtn').addEventListener('click', updateUser);
-  });
-  
-  function setFieldValue(form, fieldName, value) {
-    if(form.elements[fieldName]) {
-      form.elements[fieldName].value = value;
-    } else {
-      console.warn("Field '" + fieldName + "' not found in updateUserForm");
+      // 기존 알림 메시지가 있으면 숨기기
+      document.getElementById('updateModalAlert').style.display = 'none';
+      
+      var updateModal = new bootstrap.Modal(document.getElementById('updateUserModal'));
+      updateModal.show();
     }
-  }
-
-  let selectedUsername = null;
-  
-  function selectRow(row) {
-    // 모든 행에서 선택 스타일 제거
-    document.querySelectorAll('.table-custom tbody tr')
-      .forEach(r => r.classList.remove('table-primary'));
-    // 현재 행 스타일 적용
-    row.classList.add('table-primary');
-
-    // username(= PK)을 data-username 속성에서 읽어옴
-    selectedUsername = row.getAttribute('data-username');
-    document.getElementById('deleteUserBtn').disabled = false;
-    document.getElementById('updateUserBtn').disabled = false;
-    document.getElementById('displayUsername').textContent = row.getAttribute('data-username');
-
-    const updateForm = document.getElementById('updateUserForm');
-    setFieldValue(updateForm, 'username', row.getAttribute('data-username'));
-    setFieldValue(updateForm, 'name', row.getAttribute('data-name'));
-    setFieldValue(updateForm, 'department', row.getAttribute('data-department'));
-    setFieldValue(updateForm, 'phoneNumber', row.getAttribute('data-phone'));
-    setFieldValue(updateForm, 'email', row.getAttribute('data-email'));
-    setFieldValue(updateForm, 'allowedLoginIps', row.getAttribute('data-allowedips'));
-    // 비밀번호 필드는 비워둠
-    setFieldValue(updateForm, 'password', '');
-    setFieldValue(updateForm, 'passwordConfirm', '');
-  }
-  
-  function deleteUser() {
-    if (selectedUsername && confirm("정말로 선택된 사용자를 삭제하시겠습니까?")) {
-      document.getElementById('deleteUserId').value = selectedUsername;
-      document.getElementById('deleteForm').submit();
-    }
-  }
-  
-  function updateUser() {
-    if (!selectedUsername) {
-      alert("변경할 사용자를 먼저 선택해주세요.");
-      return;
-    }
-    
-    // 기존 알림 메시지가 있으면 숨기기
-    document.getElementById('updateModalAlert').style.display = 'none';
-    
-    var updateModal = new bootstrap.Modal(document.getElementById('updateUserModal'));
-    updateModal.show();
-  }
-  /*]]>*/
-</script>
+    /*]]>*/
+  </script>
   <script th:src="@{/bootstrap/js/bootstrap.bundle.min.js}"></script>
 </div>
 </body>
