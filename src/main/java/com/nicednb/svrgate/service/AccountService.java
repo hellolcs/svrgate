@@ -3,12 +3,10 @@ package com.nicednb.svrgate.service;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -22,7 +20,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import com.nicednb.svrgate.dto.AccountDto;
 import com.nicednb.svrgate.dto.PersonalSettingDto;
 import com.nicednb.svrgate.entity.Account;
-import com.nicednb.svrgate.exception.IpAddressRestrictionException;
 import com.nicednb.svrgate.repository.AccountRepository;
 import com.nicednb.svrgate.util.PasswordValidator;
 

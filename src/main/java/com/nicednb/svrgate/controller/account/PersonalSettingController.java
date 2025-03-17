@@ -3,7 +3,6 @@ package com.nicednb.svrgate.controller.account;
 import com.nicednb.svrgate.dto.PersonalSettingDto;
 import com.nicednb.svrgate.entity.Account;
 import com.nicednb.svrgate.service.AccountService;
-import com.nicednb.svrgate.service.OperationLogService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +27,6 @@ public class PersonalSettingController {
 
     private final Logger log = LoggerFactory.getLogger(PersonalSettingController.class);
     private final AccountService accountService;
-    private final OperationLogService operationLogService;
 
     @GetMapping
     public String personalSettingForm(Model model) {
