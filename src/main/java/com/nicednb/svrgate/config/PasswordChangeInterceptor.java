@@ -4,6 +4,7 @@ import com.nicednb.svrgate.entity.Account;
 import com.nicednb.svrgate.service.SystemSettingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,7 @@ public class PasswordChangeInterceptor implements HandlerInterceptor {
     private final SystemSettingService systemSettingService;
 
     @Override
-    public boolean preHandle(@SuppressWarnings("null") HttpServletRequest request, @SuppressWarnings("null") HttpServletResponse response, @SuppressWarnings("null") Object handler) throws Exception {
+    public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) throws Exception {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
         // 로그인한 사용자가 없거나 특정 경로 접근 시 통과
