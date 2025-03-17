@@ -24,6 +24,7 @@ import com.nicednb.svrgate.dto.PersonalSettingDto;
 import com.nicednb.svrgate.entity.Account;
 import com.nicednb.svrgate.exception.IpAddressRestrictionException;
 import com.nicednb.svrgate.repository.AccountRepository;
+import com.nicednb.svrgate.util.PasswordValidator;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -118,8 +119,22 @@ public class AccountService implements UserDetailsService {
         log.info("계정 삭제: actor={}, target={}", actor, username);
     }
 
+    /**
+     * 비밀번호 유효성 검사를 수행
+     * 
+     * @param password 검사할 비밀번호
+     * @return 비밀번호가 규칙에 맞으면 true, 아니면 false
+     */
+    public boolean validatePassword(String password) {
+        return PasswordValidator.isValid(password);
+    }
+
+
+    /**
+     * 계정 정보 업데이트 - 비밀번호 유효성 검사 추가
+     */
     @Transactional
-    public void updateAccount(AccountDto accountDto) {
+    public void updateAccount(AccountDto accountDto) throws IllegalArgumentException {
         log.debug("계정 업데이트 시작: username={}", accountDto.getUsername());
 
         Account account = accountRepository.findByUsername(accountDto.getUsername())
@@ -138,7 +153,15 @@ public class AccountService implements UserDetailsService {
         // 비밀번호가 입력된 경우에만 업데이트
         if (StringUtils.hasText(accountDto.getPassword())) {
             log.debug("계정 비밀번호 변경: username={}", accountDto.getUsername());
+            
+            // 비밀번호 규칙 검증
+            if (!validatePassword(accountDto.getPassword())) {
+                log.warn("계정 업데이트 실패: 비밀번호가 규칙에 맞지 않음 - {}", accountDto.getUsername());
+                throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+            }
+            
             account.setPassword(passwordEncoder.encode(accountDto.getPassword()));
+            account.setLastPasswordChangeTime(LocalDateTime.now());
         } else {
             log.debug("계정 비밀번호 유지: username={}", accountDto.getUsername());
         }
@@ -160,18 +183,24 @@ public class AccountService implements UserDetailsService {
         log.info("계정 업데이트 완료: username={}", accountDto.getUsername());
     }
 
+    /**
+     * 사용자 계정 저장 - 비밀번호 유효성 검사 추가
+     */
     @Transactional
-    public Account saveAccount(Account account) {
-        if (!account.getPassword().startsWith("{bcrypt}")) {
-            account.setPassword(passwordEncoder.encode(account.getPassword()));
-        }
-        boolean isNew = (account.getId() == null);
-        boolean passwordChanged = false;
-        if (isNew || (account.getPassword() != null && !account.getPassword().startsWith("{bcrypt}"))) {
+    public Account saveAccount(Account account) throws IllegalArgumentException {
+        // 새 계정 또는 비밀번호 변경 시 검증
+        if (account.getId() == null || (account.getPassword() != null && !account.getPassword().startsWith("{bcrypt}"))) {
+            // 비밀번호 규칙 검증
+            if (!validatePassword(account.getPassword())) {
+                log.warn("계정 저장 실패: 비밀번호가 규칙에 맞지 않음 - {}", account.getUsername());
+                throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+            }
+            
             account.setPassword(passwordEncoder.encode(account.getPassword()));
             account.setLastPasswordChangeTime(LocalDateTime.now());
-            passwordChanged = true;
         }
+        
+        boolean isNew = (account.getId() == null);
         Account savedAccount = accountRepository.save(account);
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         String clientIp = getCurrentClientIp();
@@ -249,8 +278,11 @@ public class AccountService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("계정을 찾을 수 없습니다: " + id));
     }
 
+    /**
+     * 개인 설정 업데이트 - 비밀번호 유효성 검사 추가
+     */
     @Transactional
-    public void updatePersonalSetting(PersonalSettingDto personalSettingDto) {
+    public void updatePersonalSetting(PersonalSettingDto personalSettingDto) throws IllegalArgumentException {
         log.debug("개인설정 업데이트 시작: username={}", personalSettingDto.getUsername());
 
         Account account = accountRepository.findByUsername(personalSettingDto.getUsername())
@@ -269,7 +301,15 @@ public class AccountService implements UserDetailsService {
         // 비밀번호가 입력된 경우에만 업데이트
         if (StringUtils.hasText(personalSettingDto.getPassword())) {
             log.debug("계정 비밀번호 변경: username={}", personalSettingDto.getUsername());
+            
+            // 비밀번호 규칙 검증
+            if (!validatePassword(personalSettingDto.getPassword())) {
+                log.warn("개인설정 업데이트 실패: 비밀번호가 규칙에 맞지 않음 - {}", personalSettingDto.getUsername());
+                throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+            }
+            
             account.setPassword(passwordEncoder.encode(personalSettingDto.getPassword()));
+            account.setLastPasswordChangeTime(LocalDateTime.now());
         } else {
             log.debug("계정 비밀번호 유지: username={}", personalSettingDto.getUsername());
         }
@@ -298,11 +338,17 @@ public class AccountService implements UserDetailsService {
         return passwordEncoder.matches(rawPassword, account.getPassword());
     }
 
-    /**
-     * 계정의 비밀번호를 업데이트합니다.
+   /**
+     * 계정의 비밀번호를 업데이트합니다. - 비밀번호 유효성 검사 추가
      */
     @Transactional
-    public void updatePassword(Account account, String newPassword) {
+    public void updatePassword(Account account, String newPassword) throws IllegalArgumentException {
+        // 비밀번호 규칙 검증
+        if (!validatePassword(newPassword)) {
+            log.warn("비밀번호 업데이트 실패: 비밀번호가 규칙에 맞지 않음 - {}", account.getUsername());
+            throw new IllegalArgumentException(PasswordValidator.getPasswordRules());
+        }
+        
         account.setPassword(passwordEncoder.encode(newPassword));
         account.setLastPasswordChangeTime(LocalDateTime.now());
         accountRepository.save(account);

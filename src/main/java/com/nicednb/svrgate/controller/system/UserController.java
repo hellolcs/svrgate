@@ -16,6 +16,7 @@ import com.nicednb.svrgate.dto.AccountDto;
 import com.nicednb.svrgate.entity.Account;
 import com.nicednb.svrgate.service.AccountService;
 
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -29,10 +30,17 @@ public class UserController {
 
     // 사용자 관리 페이지: 사용자 목록 조회 및 신규 계정 추가 폼 바인딩
     @GetMapping
-    public String userManagement(Model model) {
+    public String userManagement(Model model, HttpSession session) {
         log.info("사용자 관리 페이지 접근");
+        
         model.addAttribute("accountList", accountService.findAllAccounts());
         model.addAttribute("accountDto", new AccountDto());
+        
+        // 세션 속성 사용 후 제거
+        session.removeAttribute("modalType");
+        session.removeAttribute("modalError");
+        session.removeAttribute("selectedUsername");
+        
         return "system/user"; // 템플릿 파일: system/user.html
     }
 
@@ -41,20 +49,25 @@ public class UserController {
     public String addAccount(@Valid @ModelAttribute("accountDto") AccountDto accountDto,
             BindingResult bindingResult,
             Model model,
+            HttpSession session,
             RedirectAttributes redirectAttributes) {
         log.info("사용자 추가 요청: {}", accountDto.getUsername());
         
         if (bindingResult.hasErrors()) {
             log.warn("사용자 추가 폼 유효성 검사 실패: {}", bindingResult.getAllErrors());
             model.addAttribute("accountList", accountService.findAllAccounts());
+            // 모달 내 알림을 위한 세션 속성 설정
+            session.setAttribute("modalType", "add");
+            session.setAttribute("modalError", "입력 정보를 확인해주세요.");
             return "system/user";
         }
         
         if (!accountDto.getPassword().equals(accountDto.getPasswordConfirm())) {
             log.warn("사용자 추가 실패: 비밀번호 불일치 (사용자: {})", accountDto.getUsername());
-            model.addAttribute("errorMessage", "비밀번호가 일치하지 않습니다.");
-            model.addAttribute("accountList", accountService.findAllAccounts());
-            return "system/user";
+            // 모달 내 알림을 위한 세션 속성 설정
+            session.setAttribute("modalType", "add");
+            session.setAttribute("modalError", "비밀번호가 일치하지 않습니다.");
+            return "redirect:/system/user";
         }
         
         try {
@@ -73,9 +86,11 @@ public class UserController {
             log.info("사용자 추가 성공: {}", accountDto.getUsername());
             redirectAttributes.addFlashAttribute("successMessage", "사용자가 성공적으로 추가되었습니다.");
             return "redirect:/system/user";
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             log.error("사용자 추가 중 오류 발생: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", "사용자 추가 중 오류가 발생했습니다: " + e.getMessage());
+            // 모달 내 알림을 위한 세션 속성 설정
+            session.setAttribute("modalType", "add");
+            session.setAttribute("modalError", e.getMessage());
             return "redirect:/system/user";
         }
     }
@@ -96,16 +111,32 @@ public class UserController {
     }
 
     @PostMapping("/update")
-    public String updateUser(@ModelAttribute AccountDto accountDto, RedirectAttributes redirectAttributes) {
+    public String updateUser(@ModelAttribute AccountDto accountDto, 
+                            HttpSession session,
+                            RedirectAttributes redirectAttributes) {
         log.info("사용자 업데이트 요청: {}", accountDto.getUsername());
         try {
+            // 비밀번호 확인 검증
+            if (accountDto.getPassword() != null && !accountDto.getPassword().isEmpty() &&
+                !accountDto.getPassword().equals(accountDto.getPasswordConfirm())) {
+                log.warn("사용자 업데이트 실패: 비밀번호 불일치");
+                // 모달 내 알림을 위한 세션 속성 설정
+                session.setAttribute("modalType", "update");
+                session.setAttribute("modalError", "비밀번호가 일치하지 않습니다.");
+                session.setAttribute("selectedUsername", accountDto.getUsername());
+                return "redirect:/system/user";
+            }
+            
             accountService.updateAccount(accountDto);
             log.info("사용자 업데이트 성공: {}", accountDto.getUsername());
             redirectAttributes.addFlashAttribute("successMessage", "사용자 정보가 성공적으로 업데이트되었습니다.");
             return "redirect:/system/user";
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             log.error("사용자 업데이트 중 오류 발생: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", "사용자 업데이트 중 오류가 발생했습니다: " + e.getMessage());
+            // 모달 내 알림을 위한 세션 속성 설정
+            session.setAttribute("modalType", "update");
+            session.setAttribute("modalError", e.getMessage());
+            session.setAttribute("selectedUsername", accountDto.getUsername());
             return "redirect:/system/user";
         }
     }

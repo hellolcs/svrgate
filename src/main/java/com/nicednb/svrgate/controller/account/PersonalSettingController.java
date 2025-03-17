@@ -96,9 +96,9 @@ public class PersonalSettingController {
             redirectAttributes.addFlashAttribute("successMessage", "개인설정이 성공적으로 업데이트되었습니다.");
             
             return "redirect:/account/personal";
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             log.error("개인설정 업데이트 중 오류 발생: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", "개인설정 업데이트 중 오류가 발생했습니다: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/account/personal";
         }
     }

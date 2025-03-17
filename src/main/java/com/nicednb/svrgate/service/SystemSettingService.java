@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,12 +38,18 @@ public class SystemSettingService {
     // 캐시 저장용 맵
     private final Map<String, String> settingsCache = new HashMap<>();
     
+    // 설정 설명 매핑
+    private final Map<String, String> settingDescriptions = new HashMap<>();
+    
     /**
      * 애플리케이션 시작 시 설정값 초기화
      */
     @EventListener(ApplicationReadyEvent.class)
     public void initializeSettings() {
         log.info("시스템 설정 초기화 시작");
+        
+        // 설명 초기화
+        initializeDescriptions();
         
         // 기본 설정이 없으면 생성
         createDefaultSettingIfNotExists(KEY_MAX_IDLE_TIME, "300", "최대 유휴시간(초)", GROUP_BASIC);
@@ -54,6 +61,16 @@ public class SystemSettingService {
         refreshCache();
         
         log.info("시스템 설정 초기화 완료");
+    }
+    
+    /**
+     * 설정 설명 초기화
+     */
+    private void initializeDescriptions() {
+        settingDescriptions.put(KEY_MAX_IDLE_TIME, "최대 유휴시간(초)");
+        settingDescriptions.put(KEY_PASSWORD_CHANGE_CYCLE, "패스워드 변경주기(일)");
+        settingDescriptions.put(KEY_POLICY_CYCLE, "정책 수집주기(초)");
+        settingDescriptions.put(KEY_CONCURRENT_SERVERS, "동시 수집 서버 수(개)");
     }
     
     /**
@@ -111,28 +128,73 @@ public class SystemSettingService {
     public void saveSettings(SystemSettingDto dto, String username, String ipAddress) {
         log.info("시스템 설정 저장 시작: username={}", username);
         
-        // 기본 설정 저장
-        saveIntegerSetting(KEY_MAX_IDLE_TIME, dto.getMaxIdleTime(), GROUP_BASIC);
-        saveIntegerSetting(KEY_PASSWORD_CHANGE_CYCLE, dto.getPasswordChangeCycle(), GROUP_BASIC);
+        // 변경된 설정 추적
+        Map<String, String> changeLog = new HashMap<>();
         
-        // 연동 설정 저장
-        saveIntegerSetting(KEY_POLICY_CYCLE, dto.getPolicyCycle(), GROUP_INTEGRATION);
-        saveIntegerSetting(KEY_CONCURRENT_SERVERS, dto.getConcurrentServers(), GROUP_INTEGRATION);
+        // 기본 설정 저장 및 변경 추적
+        trackSettingChange(changeLog, KEY_MAX_IDLE_TIME, dto.getMaxIdleTime(), GROUP_BASIC);
+        trackSettingChange(changeLog, KEY_PASSWORD_CHANGE_CYCLE, dto.getPasswordChangeCycle(), GROUP_BASIC);
+        
+        // 연동 설정 저장 및 변경 추적
+        trackSettingChange(changeLog, KEY_POLICY_CYCLE, dto.getPolicyCycle(), GROUP_INTEGRATION);
+        trackSettingChange(changeLog, KEY_CONCURRENT_SERVERS, dto.getConcurrentServers(), GROUP_INTEGRATION);
         
         // 캐시 새로고침
         refreshCache();
+        
+        // 변경 내용 로그 메시지 생성
+        String logMessage = formatChangeLogMessage(changeLog);
         
         // 로그 기록
         operationLogService.logOperation(
                 username,
                 ipAddress,
                 true,
-                null,
+                logMessage, // 변경된 설정 로그를 failReason 필드에 기록
                 "시스템설정",
                 "시스템 설정 변경"
         );
         
-        log.info("시스템 설정 저장 완료: username={}", username);
+        log.info("시스템 설정 저장 완료: username={}, 변경사항={}", username, logMessage);
+    }
+    
+    /**
+     * 설정 변경 추적 및 저장
+     */
+    private void trackSettingChange(Map<String, String> changeLog, String key, Integer newValue, String group) {
+        String oldValue = getStringValue(key, null);
+        String newValueStr = String.valueOf(newValue);
+        
+        // 값이 변경된 경우에만 로그에 추가
+        if (oldValue == null || !oldValue.equals(newValueStr)) {
+            changeLog.put(key, oldValue + " → " + newValueStr);
+        }
+        
+        // 설정 저장
+        SystemSetting setting = systemSettingRepository.findByKey(key)
+                .orElse(SystemSetting.builder()
+                        .key(key)
+                        .group(group)
+                        .build());
+        
+        setting.setValue(newValueStr);
+        systemSettingRepository.save(setting);
+    }
+    
+    /**
+     * 변경 로그 메시지 포맷
+     */
+    private String formatChangeLogMessage(Map<String, String> changeLog) {
+        if (changeLog.isEmpty()) {
+            return "변경된 설정 없음";
+        }
+        
+        return changeLog.entrySet().stream()
+                .map(entry -> {
+                    String description = settingDescriptions.getOrDefault(entry.getKey(), entry.getKey());
+                    return description + ": " + entry.getValue();
+                })
+                .collect(Collectors.joining(", "));
     }
     
     /**

@@ -6,6 +6,14 @@
   <meta charset="UTF-8">
   <title>로그 조회</title>
   <link rel="stylesheet" th:href="@{/css/table.css}">
+  <style>
+    /* 메시지 컬럼 스타일 */
+    .message-column {
+      max-width: 400px;
+      white-space: pre-line;
+      word-break: break-word;
+    }
+  </style>
 </head>
 <body>
 <div layout:fragment="content">
@@ -75,7 +83,7 @@
         <td th:text="${log.ipAddress}">127.0.0.1</td>
         <td th:text="${#temporals.format(log.operationTime, 'yyyy-MM-dd HH:mm:ss')}">2025-03-04 12:00:00</td>
         <td th:text="${log.success ? '성공' : '실패'}">성공</td>
-        <td th:text="${log.failReason}">없음</td>
+        <td class="message-column" th:text="${log.failReason}">없음</td>
         <td th:text="${log.logType}">로그인</td>
         <td th:text="${log.description}">설명</td>
       </tr>

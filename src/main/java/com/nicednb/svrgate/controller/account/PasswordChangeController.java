@@ -91,7 +91,7 @@ public class PasswordChangeController {
                 return "redirect:/account/password-change";
             }
 
-           // 기존 updatePassword 메서드 사용 - 이 메서드 내에서 비밀번호 암호화 및 마지막 변경 시간 업데이트를 처리
+            // updatePassword 메서드 호출 - 비밀번호 규칙 검증이 여기서 수행됨
             accountService.updatePassword(account, passwordChangeDto.getNewPassword());
 
             // 성공 로그 남기기
@@ -117,7 +117,11 @@ public class PasswordChangeController {
             }
 
             // 로그인 페이지로 리다이렉트
-           return "redirect:/account/login?passwordChanged=true";
+            return "redirect:/account/login?passwordChanged=true";
+        } catch (IllegalArgumentException e) {
+            log.error("비밀번호 변경 중 오류 발생: {}", e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/account/password-change";
         } catch (Exception e) {
             log.error("비밀번호 변경 중 오류 발생: {}", e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "비밀번호 변경 중 오류가 발생했습니다: " + e.getMessage());
