@@ -91,7 +91,7 @@ public class PasswordChangeController {
                 return "redirect:/account/password-change";
             }
 
-            // 비밀번호 업데이트
+           // 기존 updatePassword 메서드 사용 - 이 메서드 내에서 비밀번호 암호화 및 마지막 변경 시간 업데이트를 처리
             accountService.updatePassword(account, passwordChangeDto.getNewPassword());
 
             // 성공 로그 남기기
