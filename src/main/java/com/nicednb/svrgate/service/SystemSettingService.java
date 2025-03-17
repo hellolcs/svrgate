@@ -198,20 +198,6 @@ public class SystemSettingService {
     }
     
     /**
-     * 정수형 설정 저장
-     */
-    private void saveIntegerSetting(String key, Integer value, String group) {
-        SystemSetting setting = systemSettingRepository.findByKey(key)
-                .orElse(SystemSetting.builder()
-                        .key(key)
-                        .group(group)
-                        .build());
-        
-        setting.setValue(String.valueOf(value));
-        systemSettingRepository.save(setting);
-    }
-    
-    /**
      * 문자열 설정값 조회
      */
     public String getStringValue(String key, String defaultValue) {

@@ -20,7 +20,7 @@ public class PasswordChangeInterceptor implements HandlerInterceptor {
     private final SystemSettingService systemSettingService;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(@SuppressWarnings("null") HttpServletRequest request, @SuppressWarnings("null") HttpServletResponse response, @SuppressWarnings("null") Object handler) throws Exception {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
         // 로그인한 사용자가 없거나 특정 경로 접근 시 통과

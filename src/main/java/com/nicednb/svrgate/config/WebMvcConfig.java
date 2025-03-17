@@ -12,7 +12,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private final PasswordChangeInterceptor passwordChangeInterceptor;
 
     @Override
-    public void addInterceptors(InterceptorRegistry registry) {
+    public void addInterceptors(@SuppressWarnings("null") InterceptorRegistry registry) {
         registry.addInterceptor(passwordChangeInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns("/css/**", "/js/**", "/img/**", "/bootstrap/**", "/account/login", "/error");
