@@ -36,6 +36,17 @@
         <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/system/setting'">시스템 설정</button>
       </div>
     </div>
+    
+    <!-- 서브메뉴 영역 (객체관리 메뉴에만 표시됨) -->
+    <div class="sub-menu" th:if="${currentUri != null and currentUri.startsWith('/object')}">
+      <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/object/server'">연동서버객체</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/object/general'">일반객체</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/object/network'">네트워크 객체</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="location.href='/object/zone'">Zone</button>
+      </div>
+    </div>
+    
     <!-- 우측 버튼 영역 -->
     <div class="topbar-links">
       <button type="button" class="btn btn-outline-light btn-sm rounded-pill" id="personal-setting-btn" style="font-weight: bold;" onclick="location.href='/account/personal'">
