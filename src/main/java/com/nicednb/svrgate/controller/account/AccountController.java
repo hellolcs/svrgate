@@ -27,12 +27,17 @@ public class AccountController {
     @GetMapping("/login")
     public String loginForm(Model model,
                             @RequestParam(value = "error", required = false) String error,
-                            @RequestParam(value = "loginError", required = false) String loginError) {
+                            @RequestParam(value = "loginError", required = false) String loginError,
+                            @RequestParam(value = "passwordChanged", required = false) Boolean passwordChanged) {
         log.info("로그인 폼 요청");
         model.addAttribute("loginDto", new LoginDto());
         if (error != null) {
             model.addAttribute("error", true);
             model.addAttribute("loginError", loginError);
+        }
+        
+        if (passwordChanged != null && passwordChanged) {
+            model.addAttribute("successMessage", "비밀번호가 성공적으로 변경되었습니다. 다시 로그인해주세요.");
         }
         return "account/login";
     }

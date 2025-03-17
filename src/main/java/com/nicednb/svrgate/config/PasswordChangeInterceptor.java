@@ -23,6 +23,13 @@ public class PasswordChangeInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
+        // 로그인한 사용자가 없거나 특정 경로 접근 시 통과
+        if (auth == null || auth.getPrincipal().equals("anonymousUser") || 
+                request.getRequestURI().startsWith("/account/password-change") ||
+                request.getRequestURI().startsWith("/account/login")) {
+            return true;
+        }
+        
         // 로그인한 사용자가 없거나 이미 비밀번호 변경 페이지로 이동하는 경우 통과
         if (auth == null || auth.getPrincipal().equals("anonymousUser") || 
                 request.getRequestURI().startsWith("/account/password-change")) {
