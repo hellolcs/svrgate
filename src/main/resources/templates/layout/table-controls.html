@@ -1,4 +1,3 @@
-<!-- src/main/resources/templates/layout/table-controls.html -->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 
@@ -39,8 +38,10 @@
         전체: <span th:text="${totalItems}">0</span>개
     </div>
     <div>
-        <button type="button" class="btn btn-primary btn-sm" th:onclick="${addBtnAction}" 
-                th:if="${addBtnLabel != null}">
+        <button type="button" class="btn btn-primary btn-sm" 
+                th:data-action="${addBtnAction}" 
+                th:if="${addBtnLabel != null}"
+                onclick="handleAction(this.getAttribute('data-action'))">
             <span th:text="${addBtnLabel}">추가</span>
         </button>
     </div>
@@ -111,5 +112,21 @@
             padding-top: 5px;
         }
     </style>
+    <script>
+        // 버튼 액션 처리를 위한 함수
+        function handleAction(action) {
+            if (action) {
+                // 자바스크립트 eval 없이 안전하게 처리
+                if (action.includes("modal")) {
+                    // 모달 관련 액션
+                    const modalId = action.match(/'#([^']+)'/)[1];
+                    $('#' + modalId).modal('show');
+                } else {
+                    // 기타 액션이 있다면 여기서 처리
+                    console.log("Action:", action);
+                }
+            }
+        }
+    </script>
 </div>
 </html>
