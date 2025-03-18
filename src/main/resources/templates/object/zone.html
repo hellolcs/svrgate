@@ -5,6 +5,9 @@
 <head>
     <title>Zone</title>
     <link rel="stylesheet" th:href="@{/css/table.css}">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <style>
         /* 선택 필드 스타일 */
         .select2-container--bootstrap-5 .select2-selection {
@@ -38,6 +41,9 @@
 </head>
 <body>
 <div layout:fragment="content">
+    <!-- 활성화된 Zone 데이터 JSON으로 저장 (자바스크립트에서 사용) -->
+    <script id="activeZonesData" type="application/json" th:utext="${activeZonesJson}"></script>
+
     <div class="container mt-4" style="max-width: 1800px;">
         <h2>Zone</h2>
         
@@ -328,152 +334,9 @@
     </form>
 
     <!-- Scripts -->
-    <script th:src="@{/bootstrap/js/bootstrap.bundle.min.js}"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-    <script th:inline="javascript">
-        // 페이지 로드 시 실행
-        $(document).ready(function() {
-            // Select2 초기화
-            $('.select2').select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: '선택하세요',
-                allowClear: true
-            });
-            
-            // 비보안Zone 선택 시 보안Zone에서 해당 Zone 제외
-            $('#nonSecureZoneIds').on('change', function() {
-                let nonSecureSelected = $(this).val() || [];
-                let secureSelected = $('#secureZoneIds').val() || [];
-                
-                // 중복 제거
-                secureSelected = secureSelected.filter(id => !nonSecureSelected.includes(id));
-                $('#secureZoneIds').val(secureSelected).trigger('change');
-                
-                // 비보안Zone에 선택된 항목들을 보안Zone에서 비활성화
-                $('#secureZoneIds option').each(function() {
-                    if(nonSecureSelected.includes($(this).val())) {
-                        $(this).prop('disabled', true);
-                    } else {
-                        $(this).prop('disabled', false);
-                    }
-                });
-            });
-            
-            // 보안Zone 선택 시 비보안Zone에서 해당 Zone 제외
-            $('#secureZoneIds').on('change', function() {
-                let secureSelected = $(this).val() || [];
-                let nonSecureSelected = $('#nonSecureZoneIds').val() || [];
-                
-                // 중복 제거
-                nonSecureSelected = nonSecureSelected.filter(id => !secureSelected.includes(id));
-                $('#nonSecureZoneIds').val(nonSecureSelected).trigger('change');
-                
-                // 보안Zone에 선택된 항목들을 비보안Zone에서 비활성화
-                $('#nonSecureZoneIds option').each(function() {
-                    if(secureSelected.includes($(this).val())) {
-                        $(this).prop('disabled', true);
-                    } else {
-                        $(this).prop('disabled', false);
-                    }
-                });
-            });
-            
-            // 수정 모달에서도 동일한 로직 적용
-            $('#edit-nonSecureZoneIds').on('change', function() {
-                let nonSecureSelected = $(this).val() || [];
-                let secureSelected = $('#edit-secureZoneIds').val() || [];
-                
-                // 중복 제거
-                secureSelected = secureSelected.filter(id => !nonSecureSelected.includes(id));
-                $('#edit-secureZoneIds').val(secureSelected).trigger('change');
-                
-                // 비보안Zone에 선택된 항목들을 보안Zone에서 비활성화
-                $('#edit-secureZoneIds option').each(function() {
-                    if(nonSecureSelected.includes($(this).val())) {
-                        $(this).prop('disabled', true);
-                    } else {
-                        $(this).prop('disabled', false);
-                    }
-                });
-            });
-            
-            $('#edit-secureZoneIds').on('change', function() {
-                let secureSelected = $(this).val() || [];
-                let nonSecureSelected = $('#edit-nonSecureZoneIds').val() || [];
-                
-                // 중복 제거
-                nonSecureSelected = nonSecureSelected.filter(id => !secureSelected.includes(id));
-                $('#edit-nonSecureZoneIds').val(nonSecureSelected).trigger('change');
-                
-                // 보안Zone에 선택된 항목들을 비보안Zone에서 비활성화
-                $('#edit-nonSecureZoneIds option').each(function() {
-                    if(secureSelected.includes($(this).val())) {
-                        $(this).prop('disabled', true);
-                    } else {
-                        $(this).prop('disabled', false);
-                    }
-                });
-            });
-        });
-
-        // Zone 수정 모달 열기
-        function editZone(id) {
-            // Ajax로 Zone 정보 가져오기
-            $.ajax({
-                url: '/object/zone/' + id,
-                type: 'GET',
-                success: function(response) {
-                    // 폼에 데이터 채우기
-                    $('#edit-id').val(response.id);
-                    $('#edit-name').val(response.name);
-                    $('#edit-firewallIp').val(response.firewallIp);
-                    $('#edit-active').prop('checked', response.active);
-                    $('#edit-description').val(response.description);
-                    
-                    // select2 초기화 후 값 설정
-                    $('#edit-nonSecureZoneIds').val([]).trigger('change');
-                    $('#edit-secureZoneIds').val([]).trigger('change');
-                    
-                    // 자기 자신은 선택 불가능하게 설정
-                    $('#edit-nonSecureZoneIds option[value="' + id + '"]').prop('disabled', true);
-                    $('#edit-secureZoneIds option[value="' + id + '"]').prop('disabled', true);
-                    
-                    // 비보안Zone 및 보안Zone 선택
-                    if (response.nonSecureZoneIds && response.nonSecureZoneIds.length > 0) {
-                        $('#edit-nonSecureZoneIds').val(response.nonSecureZoneIds).trigger('change');
-                    }
-                    
-                    if (response.secureZoneIds && response.secureZoneIds.length > 0) {
-                        $('#edit-secureZoneIds').val(response.secureZoneIds).trigger('change');
-                    }
-                    
-                    // 모달 열기
-                    $('#editZoneModal').modal('show');
-                },
-                error: function(xhr, status, error) {
-                    alert('Zone 정보를 가져오는 중 오류가 발생했습니다: ' + error);
-                }
-            });
-        }
-
-        // Zone 삭제
-        function deleteZone(id) {
-            if (confirm('정말 이 Zone을 삭제하시겠습니까?')) {
-                $('#deleteZoneId').val(id);
-                $('#deleteZoneForm').submit();
-            }
-        }
-
-        // Excel 업로드 모달 열기
-        function openExcelUploadModal() {
-            $('#excelUploadModal').modal('show');
-        }
-    </script>
+    <script th:src="@{/js/zone.js}"></script>
 </div>
 </body>
 </html>
