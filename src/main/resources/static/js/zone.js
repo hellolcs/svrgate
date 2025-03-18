@@ -169,10 +169,3 @@ function deleteZone(id) {
         $('#deleteZoneForm').submit();
     }
 }
-
-/**
- * Excel 업로드 모달 열기
- */
-function openExcelUploadModal() {
-    $('#excelUploadModal').modal('show');
-}

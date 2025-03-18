@@ -16,7 +16,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
@@ -146,32 +145,6 @@ public class ZoneObjectController {
         } catch (Exception e) {
             log.error("Zone 삭제 중 오류 발생: {}", e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Zone 삭제 중 오류가 발생했습니다: " + e.getMessage());
-        }
-        
-        return "redirect:/object/zone";
-    }
-    
-    /**
-     * Excel 파일 업로드 (TODO: 실제 구현 필요)
-     */
-    @PostMapping("/upload")
-    public String uploadExcel(@RequestParam("file") MultipartFile file,
-                             HttpServletRequest request,
-                             RedirectAttributes redirectAttributes) {
-        log.info("Excel 파일 업로드 요청");
-        
-        if (file.isEmpty()) {
-            redirectAttributes.addFlashAttribute("errorMessage", "파일을 선택해주세요.");
-            return "redirect:/object/zone";
-        }
-        
-        try {
-            String ipAddress = accountService.getClientIpAddress(request);
-            zoneService.processExcelUpload(file.getBytes(), ipAddress);
-            redirectAttributes.addFlashAttribute("successMessage", "Excel 파일이 성공적으로 처리되었습니다.");
-        } catch (Exception e) {
-            log.error("Excel 파일 처리 중 오류 발생: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Excel 파일 처리 중 오류가 발생했습니다: " + e.getMessage());
         }
         
         return "redirect:/object/zone";

@@ -269,13 +269,4 @@ public class ZoneService {
         // TODO: 방화벽과 RestAPI 통신 구현
         log.info("방화벽 동기화 완료: zoneId={}", zoneId);
     }
-
-    /**
-     * Excel 파일 업로드 및 처리 (TODO: 실제 구현 필요)
-     */
-    public void processExcelUpload(byte[] fileContent, String ipAddress) {
-        log.info("Excel 파일 처리 시작");
-        // TODO: Excel 파일 처리 구현
-        log.info("Excel 파일 처리 완료");
-    }
 }
