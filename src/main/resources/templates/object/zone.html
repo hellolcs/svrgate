@@ -44,12 +44,7 @@
                 url='/object/zone', 
                 searchText=${searchText}, 
                 filterName='active', 
-                filterValues=${
-                    {
-                        {value: 'true', label: '연동'},
-                        {value: 'false', label: '미연동'}
-                    }
-                }, 
+                filterValues=${filterValues}, 
                 filterCurrent=${active}, 
                 size=${size})">
             </div>
@@ -112,11 +107,150 @@
         </div>
     </div>
 
-    <!-- Zone 추가 모달 (이전과 동일하게 유지) -->
-    <!-- Zone 수정 모달 (이전과 동일하게 유지) -->
-    <!-- Zone 삭제 폼 (이전과 동일하게 유지) -->
-    
-    <!-- 스크립트 (이전과 동일하게 유지) -->
+    <!-- Zone 추가 모달 -->
+    <div class="modal fade" id="addZoneModal" tabindex="-1" aria-labelledby="addZoneModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addZoneModalLabel">Zone 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addZoneForm" th:action="@{/object/zone/add}" method="post">
+                        <div class="form-group row mb-3">
+                            <label for="name" class="col-sm-4 col-form-label">Zone명:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="name" name="name" required
+                                       pattern="^[a-zA-Z0-9_-]+$" 
+                                       title="영문자, 숫자, 대시(-), 언더바(_)만 허용됩니다.">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="firewallIp" class="col-sm-4 col-form-label">방화벽IP:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="firewallIp" name="firewallIp" required
+                                       pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" 
+                                       title="유효한 IPv4 주소 형식이 아닙니다.">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="nonSecureZoneIds" class="col-sm-4 col-form-label">비보안Zone:</label>
+                            <div class="col-sm-8">
+                                <select class="form-control select2" id="nonSecureZoneIds" name="nonSecureZoneIds" multiple>
+                                    <option th:each="zone : ${activeZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="secureZoneIds" class="col-sm-4 col-form-label">보안Zone:</label>
+                            <div class="col-sm-8">
+                                <select class="form-control select2" id="secureZoneIds" name="secureZoneIds" multiple>
+                                    <option th:each="zone : ${activeZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="active" class="col-sm-4 col-form-label">연동여부:</label>
+                            <div class="col-sm-8">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="active" name="active" checked>
+                                    <label class="form-check-label" for="active">연동</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="description" class="col-sm-4 col-form-label">설명:</label>
+                            <div class="col-sm-8">
+                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" form="addZoneForm" class="btn btn-primary">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone 수정 모달 -->
+    <div class="modal fade" id="editZoneModal" tabindex="-1" aria-labelledby="editZoneModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editZoneModalLabel">Zone 수정</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editZoneForm" th:action="@{/object/zone/update}" method="post">
+                        <input type="hidden" id="edit-id" name="id">
+                        <div class="form-group row mb-3">
+                            <label for="edit-name" class="col-sm-4 col-form-label">Zone명:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="edit-name" name="name" required
+                                       pattern="^[a-zA-Z0-9_-]+$" 
+                                       title="영문자, 숫자, 대시(-), 언더바(_)만 허용됩니다.">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-firewallIp" class="col-sm-4 col-form-label">방화벽IP:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="edit-firewallIp" name="firewallIp" required
+                                       pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" 
+                                       title="유효한 IPv4 주소 형식이 아닙니다.">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-nonSecureZoneIds" class="col-sm-4 col-form-label">비보안Zone:</label>
+                            <div class="col-sm-8">
+                                <select class="form-control select2" id="edit-nonSecureZoneIds" name="nonSecureZoneIds" multiple>
+                                    <option th:each="zone : ${activeZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-secureZoneIds" class="col-sm-4 col-form-label">보안Zone:</label>
+                            <div class="col-sm-8">
+                                <select class="form-control select2" id="edit-secureZoneIds" name="secureZoneIds" multiple>
+                                    <option th:each="zone : ${activeZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-active" class="col-sm-4 col-form-label">연동여부:</label>
+                            <div class="col-sm-8">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="edit-active" name="active">
+                                    <label class="form-check-label" for="edit-active">연동</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-description" class="col-sm-4 col-form-label">설명:</label>
+                            <div class="col-sm-8">
+                                <textarea class="form-control" id="edit-description" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" form="editZoneForm" class="btn btn-primary">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone 삭제 폼 (히든) -->
+    <form id="deleteZoneForm" th:action="@{/object/zone/delete}" method="post" style="display: none;">
+        <input type="hidden" id="deleteZoneId" name="id">
+    </form>
+
+    <!-- Scripts -->
+    <script th:src="@{/js/jquery-3.6.0.min.js}"></script>
+    <script th:src="@{/js/select2.min.js}"></script>
+    <script th:src="@{/js/zone.js}"></script>
 </div>
 </body>
 </html>

@@ -1,5 +1,6 @@
 package com.nicednb.svrgate.controller.system;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -64,9 +65,13 @@ public class UserController {
         model.addAttribute("accountDto", new AccountDto());
         model.addAttribute("searchText", searchText);
         model.addAttribute("size", size);
+        // 명시적으로 null 값 대신 빈 리스트 전달
+        model.addAttribute("filterValues", new ArrayList<>());
 
         return "system/user";
-    }    // 사용자 추가 처리
+    }
+
+    // 사용자 추가 처리
     @PostMapping("/add")
     public String addAccount(@Valid @ModelAttribute("accountDto") AccountDto accountDto,
             BindingResult bindingResult,

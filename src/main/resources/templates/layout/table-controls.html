@@ -1,4 +1,4 @@
-<!-- src/main/resources/templates/fragments/table-controls.html -->
+<!-- src/main/resources/templates/layout/table-controls.html -->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 
@@ -8,7 +8,7 @@
         <input type="text" name="searchText" class="form-control" th:placeholder="${placeholder ?: '검색어를 입력하세요'}" 
                th:value="${searchText}" minlength="2" title="최소 2글자 이상 입력해야 합니다.">
     </div>
-    <div class="col-md-2" th:if="${filterName != null}">
+    <div class="col-md-2" th:if="${filterName != null && filterValues != null}">
         <select class="form-select" th:name="${filterName}">
             <option value="" th:selected="${filterCurrent == null}">전체</option>
             <option th:each="option : ${filterValues}" 
