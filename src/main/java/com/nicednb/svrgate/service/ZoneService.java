@@ -1,0 +1,250 @@
+package com.nicednb.svrgate.service;
+
+import com.nicednb.svrgate.dto.ZoneDto;
+import com.nicednb.svrgate.entity.OperationHistory;
+import com.nicednb.svrgate.entity.Zone;
+import com.nicednb.svrgate.repository.ZoneRepository;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class ZoneService {
+
+    private final Logger log = LoggerFactory.getLogger(ZoneService.class);
+    private final ZoneRepository zoneRepository;
+    private final OperationLogService operationLogService;
+    
+    /**
+     * 모든 Zone 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public List<Zone> findAllZones() {
+        return zoneRepository.findAll();
+    }
+    
+    /**
+     * 활성화된 Zone 목록 조회 (드롭다운 선택용)
+     */
+    @Transactional(readOnly = true)
+    public List<Zone> findActiveZones() {
+        return zoneRepository.findByActiveOrderByNameAsc(true);
+    }
+    
+    /**
+     * ID로 Zone 조회
+     */
+    @Transactional(readOnly = true)
+    public Zone findById(Long id) {
+        return zoneRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Zone을 찾을 수 없습니다: " + id));
+    }
+    
+    /**
+     * Zone 검색
+     */
+    @Transactional(readOnly = true)
+    public Page<Zone> searchZones(String searchText, Boolean active, Pageable pageable) {
+        return zoneRepository.searchZones(searchText, active, pageable);
+    }
+    
+    /**
+     * ZoneDto를 Zone 엔티티로 변환
+     */
+    private Zone convertToEntity(ZoneDto zoneDto) {
+        Zone zone = new Zone();
+        
+        if (zoneDto.getId() != null) {
+            zone = findById(zoneDto.getId());
+        }
+        
+        zone.setName(zoneDto.getName());
+        zone.setFirewallIp(zoneDto.getFirewallIp());
+        zone.setActive(zoneDto.isActive());
+        zone.setDescription(zoneDto.getDescription());
+        
+        // 비보안Zone 설정
+        if (zoneDto.getNonSecureZoneIds() != null && !zoneDto.getNonSecureZoneIds().isEmpty()) {
+            Set<Zone> nonSecureZones = zoneDto.getNonSecureZoneIds().stream()
+                    .map(this::findById)
+                    .collect(Collectors.toSet());
+            zone.setNonSecureZones(nonSecureZones);
+        } else {
+            zone.setNonSecureZones(new HashSet<>());
+        }
+        
+        // 보안Zone 설정
+        if (zoneDto.getSecureZoneIds() != null && !zoneDto.getSecureZoneIds().isEmpty()) {
+            Set<Zone> secureZones = zoneDto.getSecureZoneIds().stream()
+                    .map(this::findById)
+                    .collect(Collectors.toSet());
+            zone.setSecureZones(secureZones);
+        } else {
+            zone.setSecureZones(new HashSet<>());
+        }
+        
+        return zone;
+    }
+    
+    /**
+     * Zone 엔티티를 ZoneDto로 변환
+     */
+    public ZoneDto convertToDto(Zone zone) {
+        ZoneDto dto = new ZoneDto();
+        dto.setId(zone.getId());
+        dto.setName(zone.getName());
+        dto.setFirewallIp(zone.getFirewallIp());
+        dto.setActive(zone.isActive());
+        dto.setDescription(zone.getDescription());
+        
+        // 비보안Zone ID 목록
+        if (zone.getNonSecureZones() != null && !zone.getNonSecureZones().isEmpty()) {
+            List<Long> nonSecureZoneIds = zone.getNonSecureZones().stream()
+                    .map(Zone::getId)
+                    .collect(Collectors.toList());
+            dto.setNonSecureZoneIds(nonSecureZoneIds);
+        }
+        
+        // 보안Zone ID 목록
+        if (zone.getSecureZones() != null && !zone.getSecureZones().isEmpty()) {
+            List<Long> secureZoneIds = zone.getSecureZones().stream()
+                    .map(Zone::getId)
+                    .collect(Collectors.toList());
+            dto.setSecureZoneIds(secureZoneIds);
+        }
+        
+        // 화면 표시용 필드
+        dto.setNonSecureZoneNames(zone.getNonSecureZoneNames());
+        dto.setSecureZoneNames(zone.getSecureZoneNames());
+        
+        return dto;
+    }
+    
+    /**
+     * Zone 생성
+     */
+    @Transactional
+    public Zone createZone(ZoneDto zoneDto, String ipAddress) {
+        log.info("Zone 생성 시작: {}", zoneDto.getName());
+        
+        // Zone명 중복 체크
+        if (zoneRepository.findByName(zoneDto.getName()).isPresent()) {
+            throw new IllegalArgumentException("이미 사용 중인 Zone명입니다: " + zoneDto.getName());
+        }
+        
+        // DTO를 엔티티로 변환
+        Zone zone = convertToEntity(zoneDto);
+        
+        // Zone 저장
+        Zone savedZone = zoneRepository.save(zone);
+        
+        // 로그 기록
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        operationLogService.logOperation(
+                username,
+                ipAddress,
+                true,
+                "Zone명: " + savedZone.getName(), // 로그에 추가 정보 기록
+                "객체관리",
+                "Zone 생성"
+        );
+        
+        log.info("Zone 생성 완료: {}", savedZone.getName());
+        return savedZone;
+    }
+    
+    /**
+     * Zone 수정
+     */
+    @Transactional
+    public Zone updateZone(ZoneDto zoneDto, String ipAddress) {
+        log.info("Zone 수정 시작: {}", zoneDto.getName());
+        
+        // Zone 존재 여부 확인
+        Zone existingZone = findById(zoneDto.getId());
+        
+        // Zone명 중복 체크 (자기 자신 제외)
+        zoneRepository.findByNameAndIdNot(zoneDto.getName(), zoneDto.getId())
+                .ifPresent(zone -> {
+                    throw new IllegalArgumentException("이미 사용 중인 Zone명입니다: " + zoneDto.getName());
+                });
+        
+        // DTO를 엔티티로 변환
+        Zone zone = convertToEntity(zoneDto);
+        
+        // Zone 저장
+        Zone updatedZone = zoneRepository.save(zone);
+        
+        // 로그 기록
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        operationLogService.logOperation(
+                username,
+                ipAddress,
+                true,
+                "Zone명: " + updatedZone.getName(), // 로그에 추가 정보 기록
+                "객체관리",
+                "Zone 수정"
+        );
+        
+        log.info("Zone 수정 완료: {}", updatedZone.getName());
+        return updatedZone;
+    }
+    
+    /**
+     * Zone 삭제
+     */
+    @Transactional
+    public void deleteZone(Long id, String ipAddress) {
+        log.info("Zone 삭제 시작: ID={}", id);
+        
+        // Zone 존재 여부 확인
+        Zone zone = findById(id);
+        
+        // TODO: 삭제 전 참조 관계 확인 (다른 Zone에서 참조 중인지 확인)
+        
+        // Zone 삭제
+        zoneRepository.delete(zone);
+        
+        // 로그 기록
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        operationLogService.logOperation(
+                username,
+                ipAddress,
+                true,
+                "Zone명: " + zone.getName(), // 로그에 추가 정보 기록
+                "객체관리",
+                "Zone 삭제"
+        );
+        
+        log.info("Zone 삭제 완료: {}", zone.getName());
+    }
+    
+    /**
+     * 방화벽과 RestAPI 통신 (TODO: 실제 구현 필요)
+     */
+    public void syncWithFirewall(Long zoneId) {
+        log.info("방화벽 동기화 시작: zoneId={}", zoneId);
+        // TODO: 방화벽과 RestAPI 통신 구현
+        log.info("방화벽 동기화 완료: zoneId={}", zoneId);
+    }
+    
+    /**
+     * Excel 파일 업로드 및 처리 (TODO: 실제 구현 필요)
+     */
+    public void processExcelUpload(byte[] fileContent, String ipAddress) {
+        log.info("Excel 파일 처리 시작");
+        // TODO: Excel 파일 처리 구현
+        log.info("Excel 파일 처리 완료");
+    }
+}
