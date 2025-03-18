@@ -22,9 +22,9 @@ public class SystemSetting {
     @Column(name = "setting_value")
     private String value;
     
-    @Column(name = "setting_description")
+    @Column(name = "setting_description", columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String description;
     
-    @Column(name = "setting_group")
+    @Column(name = "setting_group", columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String group;
 }

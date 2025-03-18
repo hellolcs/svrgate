@@ -31,19 +31,19 @@ public class Account implements UserDetails {
     @Column(nullable = false, length = 100)
     private String password; // 해시된 비밀번호
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 50, columnDefinition = "VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String name; // 사용자 이름
 
-    @Column(length = 100)
+    @Column(length = 100, columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String department; // 부서명
 
     @Column(length = 20)
     private String phoneNumber; // 연락처
 
-    @Column(length = 100)
+    @Column(length = 100, columnDefinition = "VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String email; // 이메일
 
-    @Column(length = 200)
+    @Column(length = 200, columnDefinition = "VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String allowedLoginIps; // 접속 허용 IP 목록 (쉼표 구분)
 
     private LocalDateTime lastLoginTime; // 마지막 로그인 시각
