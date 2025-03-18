@@ -1,0 +1,115 @@
+<!-- src/main/resources/templates/fragments/table-controls.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!-- 검색 및 필터링 폼 -->
+<div th:fragment="search-form(url, searchText, filterName, filterValues, filterCurrent, size)" class="row g-3 mb-2">
+    <div class="col-md-5">
+        <input type="text" name="searchText" class="form-control" th:placeholder="${placeholder ?: '검색어를 입력하세요'}" 
+               th:value="${searchText}" minlength="2" title="최소 2글자 이상 입력해야 합니다.">
+    </div>
+    <div class="col-md-2" th:if="${filterName != null}">
+        <select class="form-select" th:name="${filterName}">
+            <option value="" th:selected="${filterCurrent == null}">전체</option>
+            <option th:each="option : ${filterValues}" 
+                    th:value="${option.value}" 
+                    th:text="${option.label}" 
+                    th:selected="${option.value == filterCurrent}"></option>
+        </select>
+    </div>
+    <div class="col-md-1">
+        <select class="form-select" name="size">
+            <option value="10" th:selected="${size == 10}">10</option>
+            <option value="20" th:selected="${size == 20}">20</option>
+            <option value="50" th:selected="${size == 50}">50</option>
+            <option value="100" th:selected="${size == 100}">100</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-outline-dark btn-sm rounded-pill w-100" style="font-weight: bold;">
+            검색
+        </button>
+    </div>
+</div>
+
+<!-- 전체 개수 및 추가 버튼 -->
+<div th:fragment="count-add-button(totalItems, addBtnLabel, addBtnAction)" 
+     class="d-flex justify-content-between align-items-center mb-2 mt-3">
+    <div class="item-count">
+        전체: <span th:text="${totalItems}">0</span>개
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary btn-sm" th:onclick="${addBtnAction}" 
+                th:if="${addBtnLabel != null}">
+            <span th:text="${addBtnLabel}">추가</span>
+        </button>
+    </div>
+</div>
+
+<!-- 페이징 컨트롤 -->
+<div th:fragment="pagination(pageData, url, searchText, filterName, filterValue, size)" 
+     class="d-flex justify-content-between align-items-center mt-3">
+    <div>
+        <span th:text="'Page ' + (${pageData.number} + 1) + ' of ' + ${pageData.totalPages}"></span>
+    </div>
+    <div>
+        <nav th:if="${pageData.totalPages > 0}">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" th:classappend="${pageData.hasPrevious()} ? '' : 'disabled'">
+                    <a class="page-link"
+                       th:href="@{${url}(page=${pageData.number - 1}, size=${size}, 
+                           searchText=${searchText}, __${filterName != null ? filterName : '_'}__=${filterValue})}">
+                        이전
+                    </a>
+                </li>
+                <li class="page-item"
+                    th:each="i : ${#numbers.sequence(T(java.lang.Math).max(0, pageData.number - 2), 
+                                  T(java.lang.Math).min(pageData.totalPages - 1, pageData.number + 2))}"
+                    th:classappend="${i == pageData.number} ? ' active' : ''">
+                    <a class="page-link"
+                       th:href="@{${url}(page=${i}, size=${size}, 
+                           searchText=${searchText}, __${filterName != null ? filterName : '_'}__=${filterValue})}"
+                       th:text="${i + 1}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${pageData.hasNext()} ? '' : 'disabled'">
+                    <a class="page-link"
+                       th:href="@{${url}(page=${pageData.number + 1}, size=${size}, 
+                           searchText=${searchText}, __${filterName != null ? filterName : '_'}__=${filterValue})}">
+                        다음
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- 테이블 관련 스타일시트 -->
+<div th:fragment="table-styles">
+    <style>
+        /* 선택 필드 스타일 */
+        .select2-container--bootstrap-5 .select2-selection {
+            border: 1px solid #002555 !important; 
+        }
+        
+        /* 작업 버튼 크기 조정 */
+        .btn-action {
+            padding: 0.1rem 0.5rem;
+            font-size: 0.7rem;
+            line-height: 1.5;
+        }
+        
+        /* 테이블 행 높이 조정 */
+        .table-custom td {
+            padding: 6px;
+            vertical-align: middle;
+        }
+        
+        /* 항목 개수 표시 텍스트 스타일 */
+        .item-count {
+            font-size: 0.9rem;
+            color: #6c757d;
+            padding-top: 5px;
+        }
+    </style>
+</div>
+</html>

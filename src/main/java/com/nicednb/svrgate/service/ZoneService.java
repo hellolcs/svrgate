@@ -240,7 +240,7 @@ public class ZoneService {
     public void deleteZone(Long id, String ipAddress) {
         log.info("Zone 삭제 시작: ID={}", id);
 
-        // Zone 존재 여부 확인
+        // Zone 존재 여부 확인Zㅋ
         Zone zone = findById(id);
 
         // TODO: 삭제 전 참조 관계 확인 (다른 Zone에서 참조 중인지 확인)

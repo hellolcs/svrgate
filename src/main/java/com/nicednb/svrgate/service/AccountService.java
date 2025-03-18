@@ -378,4 +378,9 @@ public class AccountService implements UserDetailsService {
         log.info("비밀번호 업데이트 완료: username={}", account.getUsername());
         return true;
     }
+
+public List<Account> searchAccounts(String searchText) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'searchAccounts'");
+}
 }

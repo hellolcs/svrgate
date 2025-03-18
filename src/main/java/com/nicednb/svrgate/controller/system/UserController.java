@@ -1,5 +1,7 @@
 package com.nicednb.svrgate.controller.system;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -30,28 +32,41 @@ public class UserController {
 
     // 사용자 관리 페이지: 사용자 목록 조회 및 신규 계정 추가 폼 바인딩
     @GetMapping
-    public String userManagement(Model model, HttpSession session) {
+    public String userManagement(Model model,
+            HttpSession session,
+            @RequestParam(value = "searchText", required = false) String searchText,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
         log.info("사용자 관리 페이지 접근");
-        
+
         // 세션에서 모달 오류 정보를 모델에 복사 (뷰에서 더 쉽게 접근하기 위함)
         if (session.getAttribute("modalType") != null) {
             model.addAttribute("modalType", session.getAttribute("modalType"));
             model.addAttribute("modalError", session.getAttribute("modalError"));
             model.addAttribute("selectedUsername", session.getAttribute("selectedUsername"));
-            
+
             // 세션에서 사용 후 제거
             session.removeAttribute("modalType");
             session.removeAttribute("modalError");
             session.removeAttribute("selectedUsername");
         }
-        
-        model.addAttribute("accountList", accountService.findAllAccounts());
-        model.addAttribute("accountDto", new AccountDto());
-        
-        return "system/user";
-    }
 
-    // 사용자 추가 처리
+        // 계정 목록 조회 (검색어 적용)
+        List<Account> accountList;
+        if (searchText != null && !searchText.trim().isEmpty()) {
+            // 검색어가 있는 경우 필터링 (실제 구현은 Repository에 메서드 추가 필요)
+            accountList = accountService.searchAccounts(searchText);
+        } else {
+            accountList = accountService.findAllAccounts();
+        }
+
+        model.addAttribute("accountList", accountList);
+        model.addAttribute("accountDto", new AccountDto());
+        model.addAttribute("searchText", searchText);
+        model.addAttribute("size", size);
+
+        return "system/user";
+    }    // 사용자 추가 처리
     @PostMapping("/add")
     public String addAccount(@Valid @ModelAttribute("accountDto") AccountDto accountDto,
             BindingResult bindingResult,
@@ -59,7 +74,7 @@ public class UserController {
             HttpSession session,
             RedirectAttributes redirectAttributes) {
         log.info("사용자 추가 요청: {}", accountDto.getUsername());
-        
+
         if (bindingResult.hasErrors()) {
             log.warn("사용자 추가 폼 유효성 검사 실패: {}", bindingResult.getAllErrors());
             model.addAttribute("accountList", accountService.findAllAccounts());
@@ -68,7 +83,7 @@ public class UserController {
             session.setAttribute("modalError", "입력 정보를 확인해주세요.");
             return "redirect:/system/user";
         }
-        
+
         if (!accountDto.getPassword().equals(accountDto.getPasswordConfirm())) {
             log.warn("사용자 추가 실패: 비밀번호 불일치 (사용자: {})", accountDto.getUsername());
             // 모달 내 알림을 위한 세션 속성 설정
@@ -76,7 +91,7 @@ public class UserController {
             session.setAttribute("modalError", "비밀번호가 일치하지 않습니다.");
             return "redirect:/system/user";
         }
-        
+
         try {
             // DTO -> Account 엔티티 매핑
             Account account = Account.builder()
@@ -88,7 +103,7 @@ public class UserController {
                     .email(accountDto.getEmail())
                     .allowedLoginIps(accountDto.getAllowedLoginIps())
                     .build();
-            
+
             StringBuilder errorMessage = new StringBuilder();
             if (accountService.saveAccount(account, errorMessage)) {
                 log.info("사용자 추가 성공: {}", accountDto.getUsername());
@@ -126,14 +141,14 @@ public class UserController {
     }
 
     @PostMapping("/update")
-    public String updateUser(@ModelAttribute AccountDto accountDto, 
-                            HttpSession session,
-                            RedirectAttributes redirectAttributes) {
+    public String updateUser(@ModelAttribute AccountDto accountDto,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
         log.info("사용자 업데이트 요청: {}", accountDto.getUsername());
-        
+
         // 비밀번호 확인 검증
         if (accountDto.getPassword() != null && !accountDto.getPassword().isEmpty() &&
-            !accountDto.getPassword().equals(accountDto.getPasswordConfirm())) {
+                !accountDto.getPassword().equals(accountDto.getPasswordConfirm())) {
             log.warn("사용자 업데이트 실패: 비밀번호 불일치");
             // 모달 내 알림을 위한 세션 속성 설정
             session.setAttribute("modalType", "update");
@@ -141,7 +156,7 @@ public class UserController {
             session.setAttribute("selectedUsername", accountDto.getUsername());
             return "redirect:/system/user";
         }
-        
+
         StringBuilder errorMessage = new StringBuilder();
         if (accountService.updateAccount(accountDto, errorMessage)) {
             log.info("사용자 업데이트 성공: {}", accountDto.getUsername());
