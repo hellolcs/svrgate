@@ -25,7 +25,7 @@ public class ZoneService {
     private final Logger log = LoggerFactory.getLogger(ZoneService.class);
     private final ZoneRepository zoneRepository;
     private final OperationLogService operationLogService;
-    
+
     /**
      * 모든 Zone 목록 조회
      */
@@ -33,7 +33,7 @@ public class ZoneService {
     public List<Zone> findAllZones() {
         return zoneRepository.findAll();
     }
-    
+
     /**
      * 활성화된 Zone 목록 조회 (드롭다운 선택용)
      */
@@ -41,7 +41,7 @@ public class ZoneService {
     public List<Zone> findActiveZones() {
         return zoneRepository.findByActiveOrderByNameAsc(true);
     }
-    
+
     /**
      * ID로 Zone 조회
      */
@@ -50,7 +50,7 @@ public class ZoneService {
         return zoneRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Zone을 찾을 수 없습니다: " + id));
     }
-    
+
     /**
      * Zone 검색
      */
@@ -58,22 +58,22 @@ public class ZoneService {
     public Page<Zone> searchZones(String searchText, Boolean active, Pageable pageable) {
         return zoneRepository.searchZones(searchText, active, pageable);
     }
-    
+
     /**
      * ZoneDto를 Zone 엔티티로 변환
      */
     private Zone convertToEntity(ZoneDto zoneDto) {
         Zone zone = new Zone();
-        
+
         if (zoneDto.getId() != null) {
             zone = findById(zoneDto.getId());
         }
-        
+
         zone.setName(zoneDto.getName());
         zone.setFirewallIp(zoneDto.getFirewallIp());
         zone.setActive(zoneDto.isActive());
         zone.setDescription(zoneDto.getDescription());
-        
+
         // 비보안Zone 설정
         if (zoneDto.getNonSecureZoneIds() != null && !zoneDto.getNonSecureZoneIds().isEmpty()) {
             Set<Zone> nonSecureZones = zoneDto.getNonSecureZoneIds().stream()
@@ -83,7 +83,7 @@ public class ZoneService {
         } else {
             zone.setNonSecureZones(new HashSet<>());
         }
-        
+
         // 보안Zone 설정
         if (zoneDto.getSecureZoneIds() != null && !zoneDto.getSecureZoneIds().isEmpty()) {
             Set<Zone> secureZones = zoneDto.getSecureZoneIds().stream()
@@ -93,10 +93,10 @@ public class ZoneService {
         } else {
             zone.setSecureZones(new HashSet<>());
         }
-        
+
         return zone;
     }
-    
+
     /**
      * Zone 엔티티를 ZoneDto로 변환
      */
@@ -107,7 +107,7 @@ public class ZoneService {
         dto.setFirewallIp(zone.getFirewallIp());
         dto.setActive(zone.isActive());
         dto.setDescription(zone.getDescription());
-        
+
         // 비보안Zone ID 목록
         if (zone.getNonSecureZones() != null && !zone.getNonSecureZones().isEmpty()) {
             List<Long> nonSecureZoneIds = zone.getNonSecureZones().stream()
@@ -115,7 +115,7 @@ public class ZoneService {
                     .collect(Collectors.toList());
             dto.setNonSecureZoneIds(nonSecureZoneIds);
         }
-        
+
         // 보안Zone ID 목록
         if (zone.getSecureZones() != null && !zone.getSecureZones().isEmpty()) {
             List<Long> secureZoneIds = zone.getSecureZones().stream()
@@ -123,32 +123,46 @@ public class ZoneService {
                     .collect(Collectors.toList());
             dto.setSecureZoneIds(secureZoneIds);
         }
-        
+
         // 화면 표시용 필드
         dto.setNonSecureZoneNames(zone.getNonSecureZoneNames());
         dto.setSecureZoneNames(zone.getSecureZoneNames());
-        
+
         return dto;
     }
-    
+
     /**
      * Zone 생성
      */
     @Transactional
     public Zone createZone(ZoneDto zoneDto, String ipAddress) {
         log.info("Zone 생성 시작: {}", zoneDto.getName());
-        
+
         // Zone명 중복 체크
         if (zoneRepository.findByName(zoneDto.getName()).isPresent()) {
             throw new IllegalArgumentException("이미 사용 중인 Zone명입니다: " + zoneDto.getName());
         }
-        
+
+        // 보안Zone과 비보안Zone의 중복 체크
+        if (zoneDto.getNonSecureZoneIds() != null && zoneDto.getSecureZoneIds() != null) {
+            Set<Long> nonSecureSet = new HashSet<>(zoneDto.getNonSecureZoneIds());
+            Set<Long> secureSet = new HashSet<>(zoneDto.getSecureZoneIds());
+
+            // 교집합이 있는지 확인
+            Set<Long> intersection = new HashSet<>(nonSecureSet);
+            intersection.retainAll(secureSet);
+
+            if (!intersection.isEmpty()) {
+                throw new IllegalArgumentException("Zone은 보안Zone과 비보안Zone에 동시에 속할 수 없습니다.");
+            }
+        }
+
         // DTO를 엔티티로 변환
         Zone zone = convertToEntity(zoneDto);
-        
+
         // Zone 저장
         Zone savedZone = zoneRepository.save(zone);
-        
+
         // 로그 기록
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         operationLogService.logOperation(
@@ -157,35 +171,54 @@ public class ZoneService {
                 true,
                 "Zone명: " + savedZone.getName(), // 로그에 추가 정보 기록
                 "객체관리",
-                "Zone 생성"
-        );
-        
+                "Zone 생성");
+
         log.info("Zone 생성 완료: {}", savedZone.getName());
         return savedZone;
     }
-    
+
     /**
      * Zone 수정
      */
     @Transactional
     public Zone updateZone(ZoneDto zoneDto, String ipAddress) {
         log.info("Zone 수정 시작: {}", zoneDto.getName());
-        
+
         // Zone 존재 여부 확인
         Zone existingZone = findById(zoneDto.getId());
-        
+
         // Zone명 중복 체크 (자기 자신 제외)
         zoneRepository.findByNameAndIdNot(zoneDto.getName(), zoneDto.getId())
                 .ifPresent(zone -> {
                     throw new IllegalArgumentException("이미 사용 중인 Zone명입니다: " + zoneDto.getName());
                 });
-        
+
+        // 보안Zone과 비보안Zone의 중복 체크
+        if (zoneDto.getNonSecureZoneIds() != null && zoneDto.getSecureZoneIds() != null) {
+            Set<Long> nonSecureSet = new HashSet<>(zoneDto.getNonSecureZoneIds());
+            Set<Long> secureSet = new HashSet<>(zoneDto.getSecureZoneIds());
+
+            // 교집합이 있는지 확인
+            Set<Long> intersection = new HashSet<>(nonSecureSet);
+            intersection.retainAll(secureSet);
+
+            if (!intersection.isEmpty()) {
+                throw new IllegalArgumentException("Zone은 보안Zone과 비보안Zone에 동시에 속할 수 없습니다.");
+            }
+        }
+
+        // 자기 자신을 보안/비보안 Zone으로 설정하는지 확인
+        if ((zoneDto.getNonSecureZoneIds() != null && zoneDto.getNonSecureZoneIds().contains(zoneDto.getId())) ||
+                (zoneDto.getSecureZoneIds() != null && zoneDto.getSecureZoneIds().contains(zoneDto.getId()))) {
+            throw new IllegalArgumentException("자기 자신을 보안/비보안 Zone으로 설정할 수 없습니다.");
+        }
+
         // DTO를 엔티티로 변환
         Zone zone = convertToEntity(zoneDto);
-        
+
         // Zone 저장
         Zone updatedZone = zoneRepository.save(zone);
-        
+
         // 로그 기록
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         operationLogService.logOperation(
@@ -194,9 +227,8 @@ public class ZoneService {
                 true,
                 "Zone명: " + updatedZone.getName(), // 로그에 추가 정보 기록
                 "객체관리",
-                "Zone 수정"
-        );
-        
+                "Zone 수정");
+
         log.info("Zone 수정 완료: {}", updatedZone.getName());
         return updatedZone;
     }
@@ -207,15 +239,15 @@ public class ZoneService {
     @Transactional
     public void deleteZone(Long id, String ipAddress) {
         log.info("Zone 삭제 시작: ID={}", id);
-        
+
         // Zone 존재 여부 확인
         Zone zone = findById(id);
-        
+
         // TODO: 삭제 전 참조 관계 확인 (다른 Zone에서 참조 중인지 확인)
-        
+
         // Zone 삭제
         zoneRepository.delete(zone);
-        
+
         // 로그 기록
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         operationLogService.logOperation(
@@ -224,12 +256,11 @@ public class ZoneService {
                 true,
                 "Zone명: " + zone.getName(), // 로그에 추가 정보 기록
                 "객체관리",
-                "Zone 삭제"
-        );
-        
+                "Zone 삭제");
+
         log.info("Zone 삭제 완료: {}", zone.getName());
     }
-    
+
     /**
      * 방화벽과 RestAPI 통신 (TODO: 실제 구현 필요)
      */
@@ -238,7 +269,7 @@ public class ZoneService {
         // TODO: 방화벽과 RestAPI 통신 구현
         log.info("방화벽 동기화 완료: zoneId={}", zoneId);
     }
-    
+
     /**
      * Excel 파일 업로드 및 처리 (TODO: 실제 구현 필요)
      */

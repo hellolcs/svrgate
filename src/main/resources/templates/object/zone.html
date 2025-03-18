@@ -21,6 +21,19 @@
             background-color: #0b2e5d;
             color: white;
         }
+        
+        /* 작업 버튼 크기 조정 */
+        .btn-action {
+            padding: 0.1rem 0.5rem;
+            font-size: 0.7rem;
+            line-height: 1.5;
+        }
+        
+        /* 테이블 행 높이 조정 */
+        .table-custom td {
+            padding: 6px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -48,8 +61,8 @@
             <div class="col-md-2">
                 <select class="form-select" name="active">
                     <option value="" th:selected="${active == null}">전체</option>
-                    <option value="true" th:selected="${active == true}">사용</option>
-                    <option value="false" th:selected="${active == false}">미사용</option>
+                    <option value="true" th:selected="${active == true}">연동</option>
+                    <option value="false" th:selected="${active == false}">미연동</option>
                 </select>
             </div>
             <div class="col-md-1">
@@ -84,7 +97,7 @@
                     <th style="width: 150px;">방화벽IP</th>
                     <th>비보안Zone</th>
                     <th>보안Zone</th>
-                    <th style="width: 100px;">사용여부</th>
+                    <th style="width: 100px;">연동여부</th>
                     <th style="width: 200px;">설명</th>
                     <th style="width: 120px;">작업</th>
                 </tr>
@@ -97,15 +110,15 @@
                     <td th:text="${zone.getNonSecureZoneNames()}">비보안 Zone 목록</td>
                     <td th:text="${zone.getSecureZoneNames()}">보안 Zone 목록</td>
                     <td>
-                        <span th:if="${zone.active}" class="badge bg-success">사용</span>
-                        <span th:unless="${zone.active}" class="badge bg-danger">미사용</span>
+                        <span th:if="${zone.active}" class="badge bg-success">연동</span>
+                        <span th:unless="${zone.active}" class="badge bg-danger">미연동</span>
                     </td>
                     <td th:text="${zone.description}">설명</td>
                     <td>
-                        <button type="button" class="btn btn-sm btn-outline-primary" 
-                                th:onclick="'editZone(' + ${zone.id} + ')'">수정</button>
-                        <button type="button" class="btn btn-sm btn-outline-danger" 
-                                th:onclick="'deleteZone(' + ${zone.id} + ')'">삭제</button>
+                        <button type="button" class="btn btn-outline-primary btn-action" 
+                                onclick="editZone(this.getAttribute('data-id'))" th:data-id="${zone.id}">수정</button>
+                        <button type="button" class="btn btn-outline-danger btn-action" 
+                                onclick="deleteZone(this.getAttribute('data-id'))" th:data-id="${zone.id}">삭제</button>
                     </td>
                 </tr>
                 <tr th:if="${zones.empty}">
@@ -190,11 +203,11 @@
                             </div>
                         </div>
                         <div class="form-group row mb-3">
-                            <label for="active" class="col-sm-4 col-form-label">사용여부:</label>
+                            <label for="active" class="col-sm-4 col-form-label">연동여부:</label>
                             <div class="col-sm-8">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="active" name="active" checked>
-                                    <label class="form-check-label" for="active">사용</label>
+                                    <label class="form-check-label" for="active">연동</label>
                                 </div>
                             </div>
                         </div>
@@ -258,11 +271,11 @@
                             </div>
                         </div>
                         <div class="form-group row mb-3">
-                            <label for="edit-active" class="col-sm-4 col-form-label">사용여부:</label>
+                            <label for="edit-active" class="col-sm-4 col-form-label">연동여부:</label>
                             <div class="col-sm-8">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="edit-active" name="active">
-                                    <label class="form-check-label" for="edit-active">사용</label>
+                                    <label class="form-check-label" for="edit-active">연동</label>
                                 </div>
                             </div>
                         </div>
@@ -314,19 +327,97 @@
         <input type="hidden" id="deleteZoneId" name="id">
     </form>
 
-    <!-- Select2 및 스크립트 -->
+    <!-- Scripts -->
+    <script th:src="@{/bootstrap/js/bootstrap.bundle.min.js}"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script th:inline="javascript">
-        // 페이지 로드 시 Select2 초기화
+        // 페이지 로드 시 실행
         $(document).ready(function() {
+            // Select2 초기화
             $('.select2').select2({
                 theme: 'bootstrap-5',
                 width: '100%',
                 placeholder: '선택하세요',
                 allowClear: true
+            });
+            
+            // 비보안Zone 선택 시 보안Zone에서 해당 Zone 제외
+            $('#nonSecureZoneIds').on('change', function() {
+                let nonSecureSelected = $(this).val() || [];
+                let secureSelected = $('#secureZoneIds').val() || [];
+                
+                // 중복 제거
+                secureSelected = secureSelected.filter(id => !nonSecureSelected.includes(id));
+                $('#secureZoneIds').val(secureSelected).trigger('change');
+                
+                // 비보안Zone에 선택된 항목들을 보안Zone에서 비활성화
+                $('#secureZoneIds option').each(function() {
+                    if(nonSecureSelected.includes($(this).val())) {
+                        $(this).prop('disabled', true);
+                    } else {
+                        $(this).prop('disabled', false);
+                    }
+                });
+            });
+            
+            // 보안Zone 선택 시 비보안Zone에서 해당 Zone 제외
+            $('#secureZoneIds').on('change', function() {
+                let secureSelected = $(this).val() || [];
+                let nonSecureSelected = $('#nonSecureZoneIds').val() || [];
+                
+                // 중복 제거
+                nonSecureSelected = nonSecureSelected.filter(id => !secureSelected.includes(id));
+                $('#nonSecureZoneIds').val(nonSecureSelected).trigger('change');
+                
+                // 보안Zone에 선택된 항목들을 비보안Zone에서 비활성화
+                $('#nonSecureZoneIds option').each(function() {
+                    if(secureSelected.includes($(this).val())) {
+                        $(this).prop('disabled', true);
+                    } else {
+                        $(this).prop('disabled', false);
+                    }
+                });
+            });
+            
+            // 수정 모달에서도 동일한 로직 적용
+            $('#edit-nonSecureZoneIds').on('change', function() {
+                let nonSecureSelected = $(this).val() || [];
+                let secureSelected = $('#edit-secureZoneIds').val() || [];
+                
+                // 중복 제거
+                secureSelected = secureSelected.filter(id => !nonSecureSelected.includes(id));
+                $('#edit-secureZoneIds').val(secureSelected).trigger('change');
+                
+                // 비보안Zone에 선택된 항목들을 보안Zone에서 비활성화
+                $('#edit-secureZoneIds option').each(function() {
+                    if(nonSecureSelected.includes($(this).val())) {
+                        $(this).prop('disabled', true);
+                    } else {
+                        $(this).prop('disabled', false);
+                    }
+                });
+            });
+            
+            $('#edit-secureZoneIds').on('change', function() {
+                let secureSelected = $(this).val() || [];
+                let nonSecureSelected = $('#edit-nonSecureZoneIds').val() || [];
+                
+                // 중복 제거
+                nonSecureSelected = nonSecureSelected.filter(id => !secureSelected.includes(id));
+                $('#edit-nonSecureZoneIds').val(nonSecureSelected).trigger('change');
+                
+                // 보안Zone에 선택된 항목들을 비보안Zone에서 비활성화
+                $('#edit-nonSecureZoneIds option').each(function() {
+                    if(secureSelected.includes($(this).val())) {
+                        $(this).prop('disabled', true);
+                    } else {
+                        $(this).prop('disabled', false);
+                    }
+                });
             });
         });
 
@@ -344,9 +435,22 @@
                     $('#edit-active').prop('checked', response.active);
                     $('#edit-description').val(response.description);
                     
+                    // select2 초기화 후 값 설정
+                    $('#edit-nonSecureZoneIds').val([]).trigger('change');
+                    $('#edit-secureZoneIds').val([]).trigger('change');
+                    
+                    // 자기 자신은 선택 불가능하게 설정
+                    $('#edit-nonSecureZoneIds option[value="' + id + '"]').prop('disabled', true);
+                    $('#edit-secureZoneIds option[value="' + id + '"]').prop('disabled', true);
+                    
                     // 비보안Zone 및 보안Zone 선택
-                    $('#edit-nonSecureZoneIds').val(response.nonSecureZoneIds).trigger('change');
-                    $('#edit-secureZoneIds').val(response.secureZoneIds).trigger('change');
+                    if (response.nonSecureZoneIds && response.nonSecureZoneIds.length > 0) {
+                        $('#edit-nonSecureZoneIds').val(response.nonSecureZoneIds).trigger('change');
+                    }
+                    
+                    if (response.secureZoneIds && response.secureZoneIds.length > 0) {
+                        $('#edit-secureZoneIds').val(response.secureZoneIds).trigger('change');
+                    }
                     
                     // 모달 열기
                     $('#editZoneModal').modal('show');

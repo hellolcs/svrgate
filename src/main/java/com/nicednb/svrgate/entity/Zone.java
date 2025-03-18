@@ -44,10 +44,10 @@ public class Zone {
     private Set<Zone> secureZones = new HashSet<>();
 
     @Column(nullable = false)
-    private boolean active = true; // 사용 여부
+    private boolean active = true; // 연동여부(변경됨)
 
-    @Column(length = 255)
-    private String description; // 추가: 설명
+    @Column(length = 255, columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+    private String description; // 설명 (utf8mb4 지원 추가)
     
     // 선택된 Zone들의 ID 목록을 문자열로 반환 (UI 표시용)
     public String getNonSecureZoneNames() {
