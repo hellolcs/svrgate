@@ -133,22 +133,28 @@
                                        title="유효한 IPv4 주소 형식이 아닙니다.">
                             </div>
                         </div>
+                        <!-- 비보안Zone 선택 폼 필드 (모달) -->
                         <div class="form-group row mb-3">
                             <label for="nonSecureZoneIds" class="col-sm-4 col-form-label">비보안Zone:</label>
                             <div class="col-sm-8">
                                 <select class="form-control select2" id="nonSecureZoneIds" name="nonSecureZoneIds" multiple>
-                                    <option th:each="zone : ${activeZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                    <!-- allZones로 변경 (연동여부 상관없이 모든 Zone) -->
+                                    <option th:each="zone : ${allZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
                                 </select>
                             </div>
                         </div>
+
+                        <!-- 보안Zone 선택 폼 필드 (모달) -->
                         <div class="form-group row mb-3">
                             <label for="secureZoneIds" class="col-sm-4 col-form-label">보안Zone:</label>
                             <div class="col-sm-8">
                                 <select class="form-control select2" id="secureZoneIds" name="secureZoneIds" multiple>
-                                    <option th:each="zone : ${activeZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                    <!-- allZones로 변경 (연동여부 상관없이 모든 Zone) -->
+                                    <option th:each="zone : ${allZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
                                 </select>
                             </div>
                         </div>
+                        <!-- 연동여부 필드 (추가 모달) -->
                         <div class="form-group row mb-3">
                             <label for="active" class="col-sm-4 col-form-label">연동여부:</label>
                             <div class="col-sm-8">
@@ -156,6 +162,7 @@
                                     <input class="form-check-input" type="checkbox" id="active" name="active" checked>
                                     <label class="form-check-label" for="active">연동</label>
                                 </div>
+                                <small class="form-text text-muted">방화벽 IP로 RestAPI 통신을 수행할지 여부를 설정합니다.</small>
                             </div>
                         </div>
                         <div class="form-group row mb-3">
@@ -201,22 +208,28 @@
                                        title="유효한 IPv4 주소 형식이 아닙니다.">
                             </div>
                         </div>
+                        <!-- 비보안Zone 선택 (수정 모달) -->
                         <div class="form-group row mb-3">
                             <label for="edit-nonSecureZoneIds" class="col-sm-4 col-form-label">비보안Zone:</label>
                             <div class="col-sm-8">
                                 <select class="form-control select2" id="edit-nonSecureZoneIds" name="nonSecureZoneIds" multiple>
-                                    <option th:each="zone : ${activeZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                    <!-- allZones로 변경 (연동여부 상관없이 모든 Zone) -->
+                                    <option th:each="zone : ${allZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
                                 </select>
                             </div>
                         </div>
+
+                        <!-- 보안Zone 선택 (수정 모달) -->
                         <div class="form-group row mb-3">
                             <label for="edit-secureZoneIds" class="col-sm-4 col-form-label">보안Zone:</label>
                             <div class="col-sm-8">
                                 <select class="form-control select2" id="edit-secureZoneIds" name="secureZoneIds" multiple>
-                                    <option th:each="zone : ${activeZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                    <!-- allZones로 변경 (연동여부 상관없이 모든 Zone) -->
+                                    <option th:each="zone : ${allZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
                                 </select>
                             </div>
                         </div>
+                        <!-- 연동여부 필드 (수정 모달) -->
                         <div class="form-group row mb-3">
                             <label for="edit-active" class="col-sm-4 col-form-label">연동여부:</label>
                             <div class="col-sm-8">
@@ -224,6 +237,7 @@
                                     <input class="form-check-input" type="checkbox" id="edit-active" name="active">
                                     <label class="form-check-label" for="edit-active">연동</label>
                                 </div>
+                                <small class="form-text text-muted">방화벽 IP로 RestAPI 통신을 수행할지 여부를 설정합니다.</small>
                             </div>
                         </div>
                         <div class="form-group row mb-3">

@@ -36,9 +36,6 @@ public class ZoneObjectController {
     private final ZoneService zoneService;
     private final AccountService accountService;
 
-    /**
-     * Zone 목록 페이지
-     */
     @GetMapping
     public String zoneObjects(Model model,
             @RequestParam(value = "searchText", required = false) String searchText,
@@ -51,17 +48,17 @@ public class ZoneObjectController {
         Pageable pageable = PageRequest.of(page, size);
         Page<Zone> zones = zoneService.searchZones(searchText, active, pageable);
 
-        // 활성화된 Zone 목록 (드롭다운 선택용)
-        List<Zone> activeZones = zoneService.findActiveZones();
+        // 모든 Zone 목록 (드롭다운 선택용) - 연동여부와 상관없이 모든 Zone
+        List<Zone> allZones = zoneService.findAllZonesForDropdown();
 
         model.addAttribute("zones", zones);
-        model.addAttribute("activeZones", activeZones);
+        model.addAttribute("allZones", allZones); // activeZones에서 allZones으로 변경
         model.addAttribute("searchText", searchText);
         model.addAttribute("active", active);
         model.addAttribute("size", size);
         model.addAttribute("zoneDto", new ZoneDto());
 
-        // 필터 값을 명시적으로 설정
+        // 필터 값 설정
         List<Map<String, Object>> filterValues = new ArrayList<>();
         Map<String, Object> trueOption = new HashMap<>();
         trueOption.put("value", "true");

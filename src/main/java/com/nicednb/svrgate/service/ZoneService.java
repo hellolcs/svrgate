@@ -35,11 +35,11 @@ public class ZoneService {
     }
 
     /**
-     * 활성화된 Zone 목록 조회 (드롭다운 선택용)
+     * 드롭다운 선택용 Zone 목록 조회 (연동여부와 상관없이 모든 Zone 조회)
      */
     @Transactional(readOnly = true)
-    public List<Zone> findActiveZones() {
-        return zoneRepository.findByActiveOrderById(true);
+    public List<Zone> findAllZonesForDropdown() {
+        return zoneRepository.findAllByOrderByIdAsc();
     }
 
     /**

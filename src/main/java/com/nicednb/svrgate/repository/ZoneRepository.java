@@ -18,7 +18,7 @@ public interface ZoneRepository extends JpaRepository<Zone, Long> {
     // ID가 아닌 경우에 대해 Zone명으로 Zone 찾기 (수정 시 중복 체크용)
     Optional<Zone> findByNameAndIdNot(String name, Long id);
     
-    // 검색 쿼리 - 정렬 기준을 ID로 변경
+    // 검색 쿼리
     @Query("SELECT z FROM Zone z WHERE " +
             "(:searchText IS NULL OR :searchText = '' OR " +
             "LOWER(z.name) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
@@ -30,6 +30,6 @@ public interface ZoneRepository extends JpaRepository<Zone, Long> {
                           @Param("active") Boolean active,
                           Pageable pageable);
     
-    // 활성화된 모든 Zone 목록 조회 (드롭다운 선택용) - 정렬 기준 변경
-    List<Zone> findByActiveOrderById(boolean active);
+    // 모든 Zone을 ID 기준 오름차순으로 정렬하여 조회
+    List<Zone> findAllByOrderByIdAsc();
 }
