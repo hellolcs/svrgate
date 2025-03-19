@@ -76,8 +76,8 @@
                     <td th:text="${zone.id}">1</td>
                     <td th:text="${zone.name}">ZoneName</td>
                     <td th:text="${zone.firewallIp}">192.168.1.1</td>
-                    <td th:text="${zone.getNonSecureZoneNames()}">비보안 Zone 목록</td>
-                    <td th:text="${zone.getSecureZoneNames()}">보안 Zone 목록</td>
+                    <td th:text="${zone.getNonSecureZoneNames}">비보안 Zone 목록</td>
+                    <td th:text="${zone.getSecureZoneNames}">보안 Zone 목록</td>
                     <td>
                         <span th:if="${zone.active}" class="badge bg-success">연동</span>
                         <span th:unless="${zone.active}" class="badge bg-danger">미연동</span>
