@@ -159,6 +159,10 @@ public class ZoneObjectController {
             String ipAddress = accountService.getClientIpAddress(request);
             zoneService.deleteZone(id, ipAddress);
             redirectAttributes.addFlashAttribute("successMessage", "Zone이 성공적으로 삭제되었습니다.");
+        } catch (IllegalStateException e) {
+            // 참조 중인 경우 발생하는 예외 처리
+            log.error("Zone 삭제 중 참조 오류 발생: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         } catch (Exception e) {
             log.error("Zone 삭제 중 오류 발생: {}", e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage", "Zone 삭제 중 오류가 발생했습니다: " + e.getMessage());
