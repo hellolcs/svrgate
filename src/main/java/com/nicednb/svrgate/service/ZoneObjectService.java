@@ -2,6 +2,8 @@ package com.nicednb.svrgate.service;
 
 import com.nicednb.svrgate.dto.ZoneObjectDto;
 import com.nicednb.svrgate.entity.ZoneObject;
+import com.nicednb.svrgate.repository.GeneralObjectRepository;
+import com.nicednb.svrgate.repository.NetworkObjectRepository;
 import com.nicednb.svrgate.repository.ZoneObjectRepository;
 import com.nicednb.svrgate.util.PageConversionUtil;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,8 @@ public class ZoneObjectService {
 
     private final Logger log = LoggerFactory.getLogger(ZoneObjectService.class);
     private final ZoneObjectRepository zoneRepository;
+    private final GeneralObjectRepository generalObjectRepository; // 추가: 일반 객체와 방화벽 IP 중복 체크를 위해
+    private final NetworkObjectRepository networkObjectRepository; // 추가: 네트워크 객체와 방화벽 IP 중복 체크를 위해
     private final OperationLogService operationLogService;
 
     /**
@@ -87,6 +91,41 @@ public class ZoneObjectService {
     public Page<ZoneObjectDto> searchZonesAsDto(String searchText, Boolean active, Pageable pageable) {
         Page<ZoneObject> zonePage = searchZones(searchText, active, pageable);
         return PageConversionUtil.convertEntityPageToDtoPage(zonePage, this::convertToDto);
+    }
+
+    /**
+     * 방화벽 IP 중복 체크 (객체 타입에 관계없이 전체 체크)
+     * 
+     * @param firewallIp 체크할 방화벽 IP 주소
+     * @param zoneId 수정 시 자기 자신 제외를 위한 ID (새 객체 생성 시 null)
+     * @throws IllegalArgumentException 중복된 IP가 존재하는 경우
+     */
+    @Transactional(readOnly = true)
+    public void checkDuplicateFirewallIp(String firewallIp, Long zoneId) {
+        // 일반 객체의 IP와 중복 체크
+        generalObjectRepository.findByIpAddress(firewallIp)
+                .ifPresent(obj -> {
+                    throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + firewallIp + " (일반 객체: " + obj.getName() + ")");
+                });
+
+        // 네트워크 객체의 IP와 중복 체크
+        networkObjectRepository.findByIpAddress(firewallIp)
+                .ifPresent(obj -> {
+                    throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + firewallIp + " (네트워크 객체: " + obj.getName() + ")");
+                });
+
+        // Zone의 방화벽 IP 중복 체크
+        if (zoneId == null) {
+            zoneRepository.findByFirewallIp(firewallIp)
+                    .ifPresent(obj -> {
+                        throw new IllegalArgumentException("이미 사용 중인 방화벽 IP입니다: " + firewallIp + " (Zone: " + obj.getName() + ")");
+                    });
+        } else {
+            zoneRepository.findByFirewallIpAndIdNot(firewallIp, zoneId)
+                    .ifPresent(obj -> {
+                        throw new IllegalArgumentException("이미 사용 중인 방화벽 IP입니다: " + firewallIp + " (Zone: " + obj.getName() + ")");
+                    });
+        }
     }
 
     /**
@@ -169,9 +208,13 @@ public class ZoneObjectService {
         log.info("Zone 생성 시작: {}", zoneDto.getName());
 
         // Zone명 중복 체크
-        if (zoneRepository.findByName(zoneDto.getName()).isPresent()) {
-            throw new IllegalArgumentException("이미 사용 중인 Zone명입니다: " + zoneDto.getName());
-        }
+        zoneRepository.findByName(zoneDto.getName())
+                .ifPresent(zone -> {
+                    throw new IllegalArgumentException("이미 사용 중인 Zone명입니다: " + zoneDto.getName());
+                });
+
+        // 방화벽 IP 중복 체크 (모든 객체 타입 대상)
+        checkDuplicateFirewallIp(zoneDto.getFirewallIp(), null);
 
         // 보안Zone과 비보안Zone의 중복 체크
         if (zoneDto.getNonSecureZoneIds() != null && zoneDto.getSecureZoneIds() != null) {
@@ -222,6 +265,9 @@ public class ZoneObjectService {
                 .ifPresent(zone -> {
                     throw new IllegalArgumentException("이미 사용 중인 Zone명입니다: " + zoneDto.getName());
                 });
+
+        // 방화벽 IP 중복 체크 (모든 객체 타입 대상, 자기 자신 제외)
+        checkDuplicateFirewallIp(zoneDto.getFirewallIp(), zoneDto.getId());
 
         // 보안Zone과 비보안Zone의 중복 체크
         if (zoneDto.getNonSecureZoneIds() != null && zoneDto.getSecureZoneIds() != null) {

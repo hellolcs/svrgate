@@ -15,6 +15,12 @@ public interface NetworkObjectRepository extends JpaRepository<NetworkObject, Lo
     
     Optional<NetworkObject> findByNameAndIdNot(String name, Long id);
     
+    // IP로 객체 찾기 (중복 체크용)
+    Optional<NetworkObject> findByIpAddress(String ipAddress);
+    
+    // ID가 아닌 경우에 대해 IP로 객체 찾기 (수정 시 중복 체크용)
+    Optional<NetworkObject> findByIpAddressAndIdNot(String ipAddress, Long id);
+    
     @Query("SELECT n FROM NetworkObject n WHERE " +
             "(:searchText IS NULL OR :searchText = '' OR " +
             "LOWER(n.name) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +

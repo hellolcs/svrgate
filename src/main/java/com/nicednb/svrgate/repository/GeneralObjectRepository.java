@@ -15,6 +15,12 @@ public interface GeneralObjectRepository extends JpaRepository<GeneralObject, Lo
     
     Optional<GeneralObject> findByNameAndIdNot(String name, Long id);
     
+    // IP로 객체 찾기 (중복 체크용)
+    Optional<GeneralObject> findByIpAddress(String ipAddress);
+    
+    // ID가 아닌 경우에 대해 IP로 객체 찾기 (수정 시 중복 체크용)
+    Optional<GeneralObject> findByIpAddressAndIdNot(String ipAddress, Long id);
+    
     @Query("SELECT g FROM GeneralObject g WHERE " +
             "(:searchText IS NULL OR :searchText = '' OR " +
             "LOWER(g.name) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
