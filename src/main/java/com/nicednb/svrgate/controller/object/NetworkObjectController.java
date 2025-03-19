@@ -1,8 +1,7 @@
 package com.nicednb.svrgate.controller.object;
 
 import com.nicednb.svrgate.dto.NetworkObjectDto;
-import com.nicednb.svrgate.entity.NetworkObject;
-import com.nicednb.svrgate.entity.ZoneObject;
+import com.nicednb.svrgate.dto.ZoneObjectDto;
 import com.nicednb.svrgate.service.AccountService;
 import com.nicednb.svrgate.service.NetworkObjectService;
 import com.nicednb.svrgate.service.ZoneObjectService;
@@ -39,13 +38,12 @@ public class NetworkObjectController {
             @RequestParam(value = "size", defaultValue = "10") int size) {
         log.info("네트워크 객체 페이지 접근");
 
-        // 페이징 및 검색 처리
+        // 페이징 및 검색 처리 - DTO 사용
         Pageable pageable = PageRequest.of(page, size);
-        Page<NetworkObject> networkObjects = networkObjectService.searchNetworkObjects(searchText, pageable);
+        Page<NetworkObjectDto> networkObjects = networkObjectService.searchNetworkObjectsAsDto(searchText, pageable);
 
-        // Zone 목록 (드롭다운 선택용)
-        List<ZoneObject> allZones = zoneObjectService.findAllZonesForDropdown(); // ZoneService에서 ZoneObjectService로 변경,
-                                                                                 // Zone에서 ZoneObject로 변경
+        // Zone 목록 (드롭다운 선택용) - DTO 사용
+        List<ZoneObjectDto> allZones = zoneObjectService.findAllZonesForDropdownAsDto();
 
         model.addAttribute("networkObjects", networkObjects);
         model.addAttribute("allZones", allZones);
@@ -60,8 +58,7 @@ public class NetworkObjectController {
     @ResponseBody
     public NetworkObjectDto getNetworkObjectInfo(@PathVariable("id") Long id) {
         log.info("네트워크 객체 정보 요청: {}", id);
-        NetworkObject networkObject = networkObjectService.findById(id);
-        return networkObjectService.convertToDto(networkObject);
+        return networkObjectService.findByIdAsDto(id);
     }
 
     @PostMapping("/add")

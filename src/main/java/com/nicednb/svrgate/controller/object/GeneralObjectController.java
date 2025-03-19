@@ -1,8 +1,7 @@
 package com.nicednb.svrgate.controller.object;
 
 import com.nicednb.svrgate.dto.GeneralObjectDto;
-import com.nicednb.svrgate.entity.GeneralObject;
-import com.nicednb.svrgate.entity.ZoneObject;
+import com.nicednb.svrgate.dto.ZoneObjectDto;
 import com.nicednb.svrgate.service.AccountService;
 import com.nicednb.svrgate.service.GeneralObjectService;
 import com.nicednb.svrgate.service.ZoneObjectService;
@@ -39,12 +38,12 @@ public class GeneralObjectController {
                                 @RequestParam(value = "size", defaultValue = "10") int size) {
         log.info("일반 객체 페이지 접근");
 
-        // 페이징 및 검색 처리
+        // 페이징 및 검색 처리 - DTO 사용
         Pageable pageable = PageRequest.of(page, size);
-        Page<GeneralObject> generalObjects = generalObjectService.searchGeneralObjects(searchText, pageable);
+        Page<GeneralObjectDto> generalObjects = generalObjectService.searchGeneralObjectsAsDto(searchText, pageable);
 
-        // Zone 목록 (드롭다운 선택용)
-        List<ZoneObject> allZones = zoneObjectService.findAllZonesForDropdown();
+        // Zone 목록 (드롭다운 선택용) - DTO 사용
+        List<ZoneObjectDto> allZones = zoneObjectService.findAllZonesForDropdownAsDto();
 
         model.addAttribute("generalObjects", generalObjects);
         model.addAttribute("allZones", allZones);
@@ -59,8 +58,7 @@ public class GeneralObjectController {
     @ResponseBody
     public GeneralObjectDto getGeneralObjectInfo(@PathVariable("id") Long id) {
         log.info("일반 객체 정보 요청: {}", id);
-        GeneralObject generalObject = generalObjectService.findById(id);
-        return generalObjectService.convertToDto(generalObject);
+        return generalObjectService.findByIdAsDto(id);
     }
 
     @PostMapping("/add")

@@ -5,6 +5,7 @@ import com.nicednb.svrgate.entity.GeneralObject;
 import com.nicednb.svrgate.entity.ZoneObject;
 import com.nicednb.svrgate.repository.GeneralObjectRepository;
 import com.nicednb.svrgate.repository.ZoneObjectRepository;
+import com.nicednb.svrgate.util.PageConversionUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,11 +28,13 @@ public class GeneralObjectService {
     private final OperationLogService operationLogService;
 
     /**
-     * 모든 일반 객체 조회
+     * 모든 일반 객체 조회하여 DTO로 반환
      */
     @Transactional(readOnly = true)
-    public List<GeneralObject> findAllGeneralObjects() {
-        return generalObjectRepository.findAll();
+    public List<GeneralObjectDto> findAllGeneralObjectsAsDto() {
+        return generalObjectRepository.findAll().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -43,11 +47,28 @@ public class GeneralObjectService {
     }
 
     /**
+     * ID로 일반 객체 조회하여 DTO로 반환
+     */
+    @Transactional(readOnly = true)
+    public GeneralObjectDto findByIdAsDto(Long id) {
+        return convertToDto(findById(id));
+    }
+
+    /**
      * 일반 객체 검색
      */
     @Transactional(readOnly = true)
     public Page<GeneralObject> searchGeneralObjects(String searchText, Pageable pageable) {
         return generalObjectRepository.searchGeneralObjects(searchText, pageable);
+    }
+
+    /**
+     * 일반 객체 검색 결과를 DTO 페이지로 반환
+     */
+    @Transactional(readOnly = true)
+    public Page<GeneralObjectDto> searchGeneralObjectsAsDto(String searchText, Pageable pageable) {
+        Page<GeneralObject> objectPage = searchGeneralObjects(searchText, pageable);
+        return PageConversionUtil.convertEntityPageToDtoPage(objectPage, this::convertToDto);
     }
 
     /**
@@ -66,8 +87,7 @@ public class GeneralObjectService {
 
         // Zone 설정
         if (dto.getZoneId() != null) {
-            ZoneObject zone = zoneObjectRepository.findById(dto.getZoneId()) // Zone에서 ZoneObject로, zoneRepository에서
-                                                                             // zoneObjectRepository로 변경
+            ZoneObject zone = zoneObjectRepository.findById(dto.getZoneId())
                     .orElseThrow(() -> new IllegalArgumentException("Zone을 찾을 수 없습니다: " + dto.getZoneId()));
             generalObject.setZoneObject(zone);
         }
@@ -98,7 +118,7 @@ public class GeneralObjectService {
      * 일반 객체 생성
      */
     @Transactional
-    public GeneralObject createGeneralObject(GeneralObjectDto dto, String ipAddress) {
+    public GeneralObjectDto createGeneralObject(GeneralObjectDto dto, String ipAddress) {
         log.info("일반 객체 생성 시작: {}", dto.getName());
 
         // 일반 객체 이름 중복 체크
@@ -123,14 +143,14 @@ public class GeneralObjectService {
                 "일반 객체 생성");
 
         log.info("일반 객체 생성 완료: {}", savedGeneralObject.getName());
-        return savedGeneralObject;
+        return convertToDto(savedGeneralObject);
     }
 
     /**
      * 일반 객체 수정
      */
     @Transactional
-    public GeneralObject updateGeneralObject(GeneralObjectDto dto, String ipAddress) {
+    public GeneralObjectDto updateGeneralObject(GeneralObjectDto dto, String ipAddress) {
         log.info("일반 객체 수정 시작: {}", dto.getName());
 
         // 일반 객체 존재 여부 확인
@@ -159,7 +179,7 @@ public class GeneralObjectService {
                 "일반 객체 수정");
 
         log.info("일반 객체 수정 완료: {}", updatedGeneralObject.getName());
-        return updatedGeneralObject;
+        return convertToDto(updatedGeneralObject);
     }
 
     /**

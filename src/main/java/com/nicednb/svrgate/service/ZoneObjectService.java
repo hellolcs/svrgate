@@ -3,6 +3,7 @@ package com.nicednb.svrgate.service;
 import com.nicednb.svrgate.dto.ZoneObjectDto;
 import com.nicednb.svrgate.entity.ZoneObject;
 import com.nicednb.svrgate.repository.ZoneObjectRepository;
+import com.nicednb.svrgate.util.PageConversionUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,11 +28,13 @@ public class ZoneObjectService {
     private final OperationLogService operationLogService;
 
     /**
-     * 모든 Zone 목록 조회
+     * 모든 Zone 목록 조회하여 DTO로 반환
      */
     @Transactional(readOnly = true)
-    public List<ZoneObject> findAllZones() {
-        return zoneRepository.findAll();
+    public List<ZoneObjectDto> findAllZonesAsDto() {
+        return zoneRepository.findAll().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -40,6 +43,16 @@ public class ZoneObjectService {
     @Transactional(readOnly = true)
     public List<ZoneObject> findAllZonesForDropdown() {
         return zoneRepository.findAllByOrderByIdAsc();
+    }
+
+    /**
+     * 드롭다운 선택용 Zone 목록 DTO로 조회
+     */
+    @Transactional(readOnly = true)
+    public List<ZoneObjectDto> findAllZonesForDropdownAsDto() {
+        return findAllZonesForDropdown().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -52,11 +65,28 @@ public class ZoneObjectService {
     }
 
     /**
+     * ID로 Zone 조회하여 DTO로 반환
+     */
+    @Transactional(readOnly = true)
+    public ZoneObjectDto findByIdAsDto(Long id) {
+        return convertToDto(findById(id));
+    }
+
+    /**
      * Zone 검색
      */
     @Transactional(readOnly = true)
     public Page<ZoneObject> searchZones(String searchText, Boolean active, Pageable pageable) {
         return zoneRepository.searchZones(searchText, active, pageable);
+    }
+
+    /**
+     * Zone 검색 결과를 DTO 페이지로 반환
+     */
+    @Transactional(readOnly = true)
+    public Page<ZoneObjectDto> searchZonesAsDto(String searchText, Boolean active, Pageable pageable) {
+        Page<ZoneObject> zonePage = searchZones(searchText, active, pageable);
+        return PageConversionUtil.convertEntityPageToDtoPage(zonePage, this::convertToDto);
     }
 
     /**
@@ -135,7 +165,7 @@ public class ZoneObjectService {
      * Zone 생성
      */
     @Transactional
-    public ZoneObject createZone(ZoneObjectDto zoneDto, String ipAddress) {
+    public ZoneObjectDto createZone(ZoneObjectDto zoneDto, String ipAddress) {
         log.info("Zone 생성 시작: {}", zoneDto.getName());
 
         // Zone명 중복 체크
@@ -174,14 +204,14 @@ public class ZoneObjectService {
                 "Zone 생성");
 
         log.info("Zone 생성 완료: {}", savedZone.getName());
-        return savedZone;
+        return convertToDto(savedZone);
     }
 
     /**
      * Zone 수정
      */
     @Transactional
-    public ZoneObject updateZone(ZoneObjectDto zoneDto, String ipAddress) {
+    public ZoneObjectDto updateZone(ZoneObjectDto zoneDto, String ipAddress) {
         log.info("Zone 수정 시작: {}", zoneDto.getName());
 
         // Zone 존재 여부 확인
@@ -230,7 +260,7 @@ public class ZoneObjectService {
                 "Zone 수정");
 
         log.info("Zone 수정 완료: {}", updatedZone.getName());
-        return updatedZone;
+        return convertToDto(updatedZone);
     }
 
     /**

@@ -5,6 +5,7 @@ import com.nicednb.svrgate.entity.NetworkObject;
 import com.nicednb.svrgate.entity.ZoneObject;
 import com.nicednb.svrgate.repository.NetworkObjectRepository;
 import com.nicednb.svrgate.repository.ZoneObjectRepository;
+import com.nicednb.svrgate.util.PageConversionUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,11 +30,13 @@ public class NetworkObjectService {
     private final OperationLogService operationLogService;
 
     /**
-     * 모든 네트워크 객체 조회
+     * 모든 네트워크 객체 조회하여 DTO로 반환
      */
     @Transactional(readOnly = true)
-    public List<NetworkObject> findAllNetworkObjects() {
-        return networkObjectRepository.findAll();
+    public List<NetworkObjectDto> findAllNetworkObjectsAsDto() {
+        return networkObjectRepository.findAll().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -46,11 +49,28 @@ public class NetworkObjectService {
     }
 
     /**
+     * ID로 네트워크 객체 조회하여 DTO로 반환
+     */
+    @Transactional(readOnly = true)
+    public NetworkObjectDto findByIdAsDto(Long id) {
+        return convertToDto(findById(id));
+    }
+
+    /**
      * 네트워크 객체 검색
      */
     @Transactional(readOnly = true)
     public Page<NetworkObject> searchNetworkObjects(String searchText, Pageable pageable) {
         return networkObjectRepository.searchNetworkObjects(searchText, pageable);
+    }
+
+    /**
+     * 네트워크 객체 검색 결과를 DTO 페이지로 반환
+     */
+    @Transactional(readOnly = true)
+    public Page<NetworkObjectDto> searchNetworkObjectsAsDto(String searchText, Pageable pageable) {
+        Page<NetworkObject> objectPage = searchNetworkObjects(searchText, pageable);
+        return PageConversionUtil.convertEntityPageToDtoPage(objectPage, this::convertToDto);
     }
 
     /**
@@ -69,8 +89,8 @@ public class NetworkObjectService {
 
         // Zones 설정
         if (dto.getZoneIds() != null && !dto.getZoneIds().isEmpty()) {
-            Set<ZoneObject> zones = dto.getZoneIds().stream() // Zone에서 ZoneObject로 변경
-                    .map(zoneId -> zoneObjectRepository.findById(zoneId) // zoneRepository에서 zoneObjectRepository로 변경
+            Set<ZoneObject> zones = dto.getZoneIds().stream()
+                    .map(zoneId -> zoneObjectRepository.findById(zoneId)
                             .orElseThrow(() -> new IllegalArgumentException("Zone을 찾을 수 없습니다: " + zoneId)))
                     .collect(Collectors.toSet());
             networkObject.setZones(zones);
@@ -94,7 +114,7 @@ public class NetworkObjectService {
         // Zone ID 목록
         if (networkObject.getZones() != null && !networkObject.getZones().isEmpty()) {
             List<Long> zoneIds = networkObject.getZones().stream()
-                    .map(ZoneObject::getId) // Zone에서 ZoneObject로 변경
+                    .map(ZoneObject::getId)
                     .collect(Collectors.toList());
             dto.setZoneIds(zoneIds);
         }
@@ -109,7 +129,7 @@ public class NetworkObjectService {
      * 네트워크 객체 생성
      */
     @Transactional
-    public NetworkObject createNetworkObject(NetworkObjectDto dto, String ipAddress) {
+    public NetworkObjectDto createNetworkObject(NetworkObjectDto dto, String ipAddress) {
         log.info("네트워크 객체 생성 시작: {}", dto.getName());
 
         // 네트워크 이름 중복 체크
@@ -134,14 +154,14 @@ public class NetworkObjectService {
                 "네트워크 객체 생성");
 
         log.info("네트워크 객체 생성 완료: {}", savedNetworkObject.getName());
-        return savedNetworkObject;
+        return convertToDto(savedNetworkObject);
     }
 
     /**
      * 네트워크 객체 수정
      */
     @Transactional
-    public NetworkObject updateNetworkObject(NetworkObjectDto dto, String ipAddress) {
+    public NetworkObjectDto updateNetworkObject(NetworkObjectDto dto, String ipAddress) {
         log.info("네트워크 객체 수정 시작: {}", dto.getName());
 
         // 네트워크 객체 존재 여부 확인
@@ -170,7 +190,7 @@ public class NetworkObjectService {
                 "네트워크 객체 수정");
 
         log.info("네트워크 객체 수정 완료: {}", updatedNetworkObject.getName());
-        return updatedNetworkObject;
+        return convertToDto(updatedNetworkObject);
     }
 
     /**

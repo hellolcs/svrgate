@@ -1,7 +1,6 @@
 package com.nicednb.svrgate.controller.object;
 
 import com.nicednb.svrgate.dto.ZoneObjectDto;
-import com.nicednb.svrgate.entity.ZoneObject;
 import com.nicednb.svrgate.service.AccountService;
 import com.nicednb.svrgate.service.ZoneObjectService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,15 +43,15 @@ public class ZoneObjectController {
             @RequestParam(value = "size", defaultValue = "10") int size) {
         log.info("Zone 페이지 접근");
 
-        // 페이징 및 검색 처리
+        // 페이징 및 검색 처리 - DTO 사용
         Pageable pageable = PageRequest.of(page, size);
-        Page<ZoneObject> zones = zoneService.searchZones(searchText, active, pageable);
+        Page<ZoneObjectDto> zones = zoneService.searchZonesAsDto(searchText, active, pageable);
 
-        // 모든 Zone 목록 (드롭다운 선택용) - 연동여부와 상관없이 모든 Zone
-        List<ZoneObject> allZones = zoneService.findAllZonesForDropdown();
+        // 모든 Zone 목록 (드롭다운 선택용) - 연동여부와 상관없이 모든 Zone - DTO 사용
+        List<ZoneObjectDto> allZones = zoneService.findAllZonesForDropdownAsDto();
 
         model.addAttribute("zones", zones);
-        model.addAttribute("allZones", allZones); // activeZones에서 allZones으로 변경
+        model.addAttribute("allZones", allZones);
         model.addAttribute("searchText", searchText);
         model.addAttribute("active", active);
         model.addAttribute("size", size);
@@ -82,9 +81,7 @@ public class ZoneObjectController {
     @ResponseBody
     public ZoneObjectDto getZoneInfo(@PathVariable("id") Long id) {
         log.info("Zone 정보 요청: {}", id);
-        ZoneObject zone = zoneService.findById(id);
-        ZoneObjectDto dto = zoneService.convertToDto(zone);
-        return dto;
+        return zoneService.findByIdAsDto(id);
     }
 
     /**
@@ -105,7 +102,7 @@ public class ZoneObjectController {
 
         try {
             String ipAddress = accountService.getClientIpAddress(request);
-            ZoneObject zone = zoneService.createZone(zoneDto, ipAddress);
+            zoneService.createZone(zoneDto, ipAddress);
             redirectAttributes.addFlashAttribute("successMessage", "Zone이 성공적으로 추가되었습니다.");
             return "redirect:/object/zone";
         } catch (Exception e) {
@@ -133,7 +130,7 @@ public class ZoneObjectController {
 
         try {
             String ipAddress = accountService.getClientIpAddress(request);
-            ZoneObject zone = zoneService.updateZone(zoneDto, ipAddress);
+            zoneService.updateZone(zoneDto, ipAddress);
             redirectAttributes.addFlashAttribute("successMessage", "Zone이 성공적으로 수정되었습니다.");
             return "redirect:/object/zone";
         } catch (Exception e) {
