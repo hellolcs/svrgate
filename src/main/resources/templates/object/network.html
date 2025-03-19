@@ -4,6 +4,23 @@
       layout:decorate="~{/layout/layout}">
 <head>
     <title>네트워크 객체</title>
+    <link rel="stylesheet" th:href="@{/css/table.css}">
+    <!-- Select2 CSS -->
+    <link rel="stylesheet" th:href="@{/css/select2.min.css}" />
+    <link rel="stylesheet" th:href="@{/css/select2-bootstrap-5-theme.min.css}" />
+    <th:block th:replace="~{layout/table-controls :: table-styles}"></th:block>
+    <style>
+        /* 모달 내부 폼 그룹 스타일 */
+        .modal .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        /* 모달 헤더 배경색 */
+        .modal-header {
+            background-color: #0b2e5d;
+            color: white;
+        }
+    </style>
 </head>
 <body>
 <div layout:fragment="content">
@@ -21,17 +38,182 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         
-        <!-- 임시 콘텐츠 -->
-        <div class="card">
-            <div class="card-header" style="background-color: #E1F6FA;">
-                <h5 class="mb-0">네트워크 객체 관리</h5>
+        <!-- 검색 및 필터링 폼 -->
+        <form action="/object/network" method="get">
+            <div th:replace="layout/table-controls :: search-form(
+                url='/object/network', 
+                searchText=${searchText}, 
+                filterName=null, 
+                filterValues=null, 
+                filterCurrent=null, 
+                size=${size})">
             </div>
-            <div class="card-body">
-                <p>이 페이지에서는 네트워크 객체를 관리할 수 있습니다.</p>
-                <p>추후 실제 기능이 구현될 예정입니다.</p>
+        </form>
+        
+        <!-- 전체 개수 및 추가 버튼 -->
+        <div th:replace="layout/table-controls :: count-add-button(
+            totalItems=${networkObjects.totalElements}, 
+            addBtnLabel='네트워크 객체 추가', 
+            addBtnAction='$(\'#addNetworkObjectModal\').modal(\'show\')')">
+        </div>
+
+        <!-- 네트워크 객체 목록 테이블 -->
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th style="width: 60px;">ID</th>
+                    <th style="width: 150px;">이름</th>
+                    <th style="width: 150px;">IP 주소</th>
+                    <th>Zone</th>
+                    <th style="width: 200px;">설명</th>
+                    <th style="width: 120px;">작업</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="networkObject : ${networkObjects.content}" th:data-id="${networkObject.id}">
+                    <td th:text="${networkObject.id}">1</td>
+                    <td th:text="${networkObject.name}">NetworkObject</td>
+                    <td th:text="${networkObject.ipAddress}">192.168.1.0/24</td>
+                    <td th:text="${networkObject.getZoneNames()}">Zone 목록</td>
+                    <td th:text="${networkObject.description}">설명</td>
+                    <td>
+                        <button type="button" class="btn btn-outline-primary btn-action" 
+                                onclick="editNetworkObject(this.getAttribute('data-id'))" th:data-id="${networkObject.id}">수정</button>
+                        <button type="button" class="btn btn-outline-danger btn-action" 
+                                onclick="deleteNetworkObject(this.getAttribute('data-id'))" th:data-id="${networkObject.id}">삭제</button>
+                    </td>
+                </tr>
+                <tr th:if="${networkObjects.empty}">
+                    <td colspan="6" class="text-center">등록된 네트워크 객체가 없습니다.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 페이징 컨트롤 -->
+        <div th:replace="layout/table-controls :: pagination(
+            pageData=${networkObjects}, 
+            url='/object/network', 
+            searchText=${searchText}, 
+            filterName=null, 
+            filterValue=null, 
+            size=${size})">
+        </div>
+    </div>
+
+    <!-- 네트워크 객체 추가 모달 -->
+    <div class="modal fade" id="addNetworkObjectModal" tabindex="-1" aria-labelledby="addNetworkObjectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addNetworkObjectModalLabel">네트워크 객체 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addNetworkObjectForm" th:action="@{/object/network/add}" method="post">
+                        <div class="form-group row mb-3">
+                            <label for="name" class="col-sm-4 col-form-label">네트워크 이름:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="name" name="name" required
+                                       pattern="^[a-zA-Z0-9_-]+$" 
+                                       title="영문자, 숫자, 대시(-), 언더바(_)만 허용됩니다.">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="ipAddress" class="col-sm-4 col-form-label">IP 주소:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="ipAddress" name="ipAddress" required
+                                       pattern="^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/)(8|16|24)$" 
+                                       title="유효한 A, B, C 클래스 IPv4 주소 형식이 아닙니다. (예: 10.0.0.0/8, 172.16.0.0/16, 192.168.1.0/24)">
+                                <small class="form-text text-muted">A, B, C 클래스 네트워크 주소를 입력하세요 (예: 10.0.0.0/8, 172.16.0.0/16, 192.168.1.0/24)</small>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="zoneIds" class="col-sm-4 col-form-label">Zone:</label>
+                            <div class="col-sm-8">
+                                <select class="form-control select2" id="zoneIds" name="zoneIds" multiple>
+                                    <option th:each="zone : ${allZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                </select>
+                                <small class="form-text text-muted">복수 선택 가능합니다.</small>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="description" class="col-sm-4 col-form-label">설명:</label>
+                            <div class="col-sm-8">
+                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" form="addNetworkObjectForm" class="btn btn-primary">저장</button>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- 네트워크 객체 수정 모달 -->
+    <div class="modal fade" id="editNetworkObjectModal" tabindex="-1" aria-labelledby="editNetworkObjectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editNetworkObjectModalLabel">네트워크 객체 수정</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editNetworkObjectForm" th:action="@{/object/network/update}" method="post">
+                        <input type="hidden" id="edit-id" name="id">
+                        <div class="form-group row mb-3">
+                            <label for="edit-name" class="col-sm-4 col-form-label">네트워크 이름:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="edit-name" name="name" required
+                                       pattern="^[a-zA-Z0-9_-]+$" 
+                                       title="영문자, 숫자, 대시(-), 언더바(_)만 허용됩니다.">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-ipAddress" class="col-sm-4 col-form-label">IP 주소:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="edit-ipAddress" name="ipAddress" required
+                                       pattern="^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/)(8|16|24)$" 
+                                       title="유효한 A, B, C 클래스 IPv4 주소 형식이 아닙니다. (예: 10.0.0.0/8, 172.16.0.0/16, 192.168.1.0/24)">
+                                <small class="form-text text-muted">A, B, C 클래스 네트워크 주소를 입력하세요 (예: 10.0.0.0/8, 172.16.0.0/16, 192.168.1.0/24)</small>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-zoneIds" class="col-sm-4 col-form-label">Zone:</label>
+                            <div class="col-sm-8">
+                                <select class="form-control select2" id="edit-zoneIds" name="zoneIds" multiple>
+                                    <option th:each="zone : ${allZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                </select>
+                                <small class="form-text text-muted">복수 선택 가능합니다.</small>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-description" class="col-sm-4 col-form-label">설명:</label>
+                            <div class="col-sm-8">
+                                <textarea class="form-control" id="edit-description" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" form="editNetworkObjectForm" class="btn btn-primary">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 네트워크 객체 삭제 폼 (히든) -->
+    <form id="deleteNetworkObjectForm" th:action="@{/object/network/delete}" method="post" style="display: none;">
+        <input type="hidden" id="deleteNetworkObjectId" name="id">
+    </form>
+
+    <!-- Scripts -->
+    <script th:src="@{/js/jquery-3.6.0.min.js}"></script>
+    <script th:src="@{/js/select2.min.js}"></script>
+    <script th:src="@{/js/network-object.js}"></script>
 </div>
 </body>
 </html>

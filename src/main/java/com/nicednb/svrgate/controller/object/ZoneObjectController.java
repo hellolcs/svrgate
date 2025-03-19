@@ -1,9 +1,9 @@
 package com.nicednb.svrgate.controller.object;
 
-import com.nicednb.svrgate.dto.ZoneDto;
-import com.nicednb.svrgate.entity.Zone;
+import com.nicednb.svrgate.dto.ZoneObjectDto;
+import com.nicednb.svrgate.entity.ZoneObject;
 import com.nicednb.svrgate.service.AccountService;
-import com.nicednb.svrgate.service.ZoneService;
+import com.nicednb.svrgate.service.ZoneObjectService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ import java.util.Map;
 public class ZoneObjectController {
 
     private final Logger log = LoggerFactory.getLogger(ZoneObjectController.class);
-    private final ZoneService zoneService;
+    private final ZoneObjectService zoneService;
     private final AccountService accountService;
 
     @GetMapping
@@ -46,17 +46,17 @@ public class ZoneObjectController {
 
         // 페이징 및 검색 처리
         Pageable pageable = PageRequest.of(page, size);
-        Page<Zone> zones = zoneService.searchZones(searchText, active, pageable);
+        Page<ZoneObject> zones = zoneService.searchZones(searchText, active, pageable);
 
         // 모든 Zone 목록 (드롭다운 선택용) - 연동여부와 상관없이 모든 Zone
-        List<Zone> allZones = zoneService.findAllZonesForDropdown();
+        List<ZoneObject> allZones = zoneService.findAllZonesForDropdown();
 
         model.addAttribute("zones", zones);
         model.addAttribute("allZones", allZones); // activeZones에서 allZones으로 변경
         model.addAttribute("searchText", searchText);
         model.addAttribute("active", active);
         model.addAttribute("size", size);
-        model.addAttribute("zoneDto", new ZoneDto());
+        model.addAttribute("zoneDto", new ZoneObjectDto());
 
         // 필터 값 설정
         List<Map<String, Object>> filterValues = new ArrayList<>();
@@ -80,10 +80,10 @@ public class ZoneObjectController {
      */
     @GetMapping("/{id}")
     @ResponseBody
-    public ZoneDto getZoneInfo(@PathVariable("id") Long id) {
+    public ZoneObjectDto getZoneInfo(@PathVariable("id") Long id) {
         log.info("Zone 정보 요청: {}", id);
-        Zone zone = zoneService.findById(id);
-        ZoneDto dto = zoneService.convertToDto(zone);
+        ZoneObject zone = zoneService.findById(id);
+        ZoneObjectDto dto = zoneService.convertToDto(zone);
         return dto;
     }
 
@@ -91,7 +91,7 @@ public class ZoneObjectController {
      * Zone 추가
      */
     @PostMapping("/add")
-    public String addZone(@Valid @ModelAttribute("zoneDto") ZoneDto zoneDto,
+    public String addZone(@Valid @ModelAttribute("zoneDto") ZoneObjectDto zoneDto,
             BindingResult bindingResult,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
@@ -105,7 +105,7 @@ public class ZoneObjectController {
 
         try {
             String ipAddress = accountService.getClientIpAddress(request);
-            Zone zone = zoneService.createZone(zoneDto, ipAddress);
+            ZoneObject zone = zoneService.createZone(zoneDto, ipAddress);
             redirectAttributes.addFlashAttribute("successMessage", "Zone이 성공적으로 추가되었습니다.");
             return "redirect:/object/zone";
         } catch (Exception e) {
@@ -119,7 +119,7 @@ public class ZoneObjectController {
      * Zone 수정
      */
     @PostMapping("/update")
-    public String updateZone(@Valid @ModelAttribute("zoneDto") ZoneDto zoneDto,
+    public String updateZone(@Valid @ModelAttribute("zoneDto") ZoneObjectDto zoneDto,
             BindingResult bindingResult,
             HttpServletRequest request,
             RedirectAttributes redirectAttributes) {
@@ -133,7 +133,7 @@ public class ZoneObjectController {
 
         try {
             String ipAddress = accountService.getClientIpAddress(request);
-            Zone zone = zoneService.updateZone(zoneDto, ipAddress);
+            ZoneObject zone = zoneService.updateZone(zoneDto, ipAddress);
             redirectAttributes.addFlashAttribute("successMessage", "Zone이 성공적으로 수정되었습니다.");
             return "redirect:/object/zone";
         } catch (Exception e) {

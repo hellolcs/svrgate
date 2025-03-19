@@ -1,8 +1,8 @@
 package com.nicednb.svrgate.service;
 
-import com.nicednb.svrgate.dto.ZoneDto;
-import com.nicednb.svrgate.entity.Zone;
-import com.nicednb.svrgate.repository.ZoneRepository;
+import com.nicednb.svrgate.dto.ZoneObjectDto;
+import com.nicednb.svrgate.entity.ZoneObject;
+import com.nicednb.svrgate.repository.ZoneObjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,17 +20,17 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ZoneService {
+public class ZoneObjectService {
 
-    private final Logger log = LoggerFactory.getLogger(ZoneService.class);
-    private final ZoneRepository zoneRepository;
+    private final Logger log = LoggerFactory.getLogger(ZoneObjectService.class);
+    private final ZoneObjectRepository zoneRepository;
     private final OperationLogService operationLogService;
 
     /**
      * 모든 Zone 목록 조회
      */
     @Transactional(readOnly = true)
-    public List<Zone> findAllZones() {
+    public List<ZoneObject> findAllZones() {
         return zoneRepository.findAll();
     }
 
@@ -38,7 +38,7 @@ public class ZoneService {
      * 드롭다운 선택용 Zone 목록 조회 (연동여부와 상관없이 모든 Zone 조회)
      */
     @Transactional(readOnly = true)
-    public List<Zone> findAllZonesForDropdown() {
+    public List<ZoneObject> findAllZonesForDropdown() {
         return zoneRepository.findAllByOrderByIdAsc();
     }
 
@@ -46,7 +46,7 @@ public class ZoneService {
      * ID로 Zone 조회
      */
     @Transactional(readOnly = true)
-    public Zone findById(Long id) {
+    public ZoneObject findById(Long id) {
         return zoneRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Zone을 찾을 수 없습니다: " + id));
     }
@@ -55,15 +55,15 @@ public class ZoneService {
      * Zone 검색
      */
     @Transactional(readOnly = true)
-    public Page<Zone> searchZones(String searchText, Boolean active, Pageable pageable) {
+    public Page<ZoneObject> searchZones(String searchText, Boolean active, Pageable pageable) {
         return zoneRepository.searchZones(searchText, active, pageable);
     }
 
     /**
      * ZoneDto를 Zone 엔티티로 변환
      */
-    private Zone convertToEntity(ZoneDto zoneDto) {
-        Zone zone = new Zone();
+    private ZoneObject convertToEntity(ZoneObjectDto zoneDto) {
+        ZoneObject zone = new ZoneObject();
 
         if (zoneDto.getId() != null) {
             zone = findById(zoneDto.getId());
@@ -76,7 +76,7 @@ public class ZoneService {
 
         // 비보안Zone 설정
         if (zoneDto.getNonSecureZoneIds() != null && !zoneDto.getNonSecureZoneIds().isEmpty()) {
-            Set<Zone> nonSecureZones = zoneDto.getNonSecureZoneIds().stream()
+            Set<ZoneObject> nonSecureZones = zoneDto.getNonSecureZoneIds().stream()
                     .map(this::findById)
                     .collect(Collectors.toSet());
             zone.setNonSecureZones(nonSecureZones);
@@ -86,7 +86,7 @@ public class ZoneService {
 
         // 보안Zone 설정
         if (zoneDto.getSecureZoneIds() != null && !zoneDto.getSecureZoneIds().isEmpty()) {
-            Set<Zone> secureZones = zoneDto.getSecureZoneIds().stream()
+            Set<ZoneObject> secureZones = zoneDto.getSecureZoneIds().stream()
                     .map(this::findById)
                     .collect(Collectors.toSet());
             zone.setSecureZones(secureZones);
@@ -100,8 +100,8 @@ public class ZoneService {
     /**
      * Zone 엔티티를 ZoneDto로 변환
      */
-    public ZoneDto convertToDto(Zone zone) {
-        ZoneDto dto = new ZoneDto();
+    public ZoneObjectDto convertToDto(ZoneObject zone) {
+        ZoneObjectDto dto = new ZoneObjectDto();
         dto.setId(zone.getId());
         dto.setName(zone.getName());
         dto.setFirewallIp(zone.getFirewallIp());
@@ -111,7 +111,7 @@ public class ZoneService {
         // 비보안Zone ID 목록
         if (zone.getNonSecureZones() != null && !zone.getNonSecureZones().isEmpty()) {
             List<Long> nonSecureZoneIds = zone.getNonSecureZones().stream()
-                    .map(Zone::getId)
+                    .map(ZoneObject::getId)
                     .collect(Collectors.toList());
             dto.setNonSecureZoneIds(nonSecureZoneIds);
         }
@@ -119,7 +119,7 @@ public class ZoneService {
         // 보안Zone ID 목록
         if (zone.getSecureZones() != null && !zone.getSecureZones().isEmpty()) {
             List<Long> secureZoneIds = zone.getSecureZones().stream()
-                    .map(Zone::getId)
+                    .map(ZoneObject::getId)
                     .collect(Collectors.toList());
             dto.setSecureZoneIds(secureZoneIds);
         }
@@ -135,7 +135,7 @@ public class ZoneService {
      * Zone 생성
      */
     @Transactional
-    public Zone createZone(ZoneDto zoneDto, String ipAddress) {
+    public ZoneObject createZone(ZoneObjectDto zoneDto, String ipAddress) {
         log.info("Zone 생성 시작: {}", zoneDto.getName());
 
         // Zone명 중복 체크
@@ -158,10 +158,10 @@ public class ZoneService {
         }
 
         // DTO를 엔티티로 변환
-        Zone zone = convertToEntity(zoneDto);
+        ZoneObject zone = convertToEntity(zoneDto);
 
         // Zone 저장
-        Zone savedZone = zoneRepository.save(zone);
+        ZoneObject savedZone = zoneRepository.save(zone);
 
         // 로그 기록
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -181,11 +181,11 @@ public class ZoneService {
      * Zone 수정
      */
     @Transactional
-    public Zone updateZone(ZoneDto zoneDto, String ipAddress) {
+    public ZoneObject updateZone(ZoneObjectDto zoneDto, String ipAddress) {
         log.info("Zone 수정 시작: {}", zoneDto.getName());
 
         // Zone 존재 여부 확인
-        Zone existingZone = findById(zoneDto.getId());
+        ZoneObject existingZone = findById(zoneDto.getId());
 
         // Zone명 중복 체크 (자기 자신 제외)
         zoneRepository.findByNameAndIdNot(zoneDto.getName(), zoneDto.getId())
@@ -214,10 +214,10 @@ public class ZoneService {
         }
 
         // DTO를 엔티티로 변환
-        Zone zone = convertToEntity(zoneDto);
+        ZoneObject zone = convertToEntity(zoneDto);
 
         // Zone 저장
-        Zone updatedZone = zoneRepository.save(zone);
+        ZoneObject updatedZone = zoneRepository.save(zone);
 
         // 로그 기록
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -243,17 +243,17 @@ public class ZoneService {
     public ZoneReferenceInfo checkZoneReferences(Long zoneId) {
         log.debug("Zone 참조 확인: ID={}", zoneId);
 
-        List<Zone> allZones = zoneRepository.findAll();
-        List<Zone> referencingZones = new ArrayList<>();
+        List<ZoneObject> allZones = zoneRepository.findAll();
+        List<ZoneObject> referencingZones = new ArrayList<>();
 
-        for (Zone zone : allZones) {
+        for (ZoneObject zone : allZones) {
             // 자기 자신은 제외
             if (zone.getId().equals(zoneId)) {
                 continue;
             }
 
             // 비보안 Zone으로 참조되는지 확인
-            for (Zone nonSecureZone : zone.getNonSecureZones()) {
+            for (ZoneObject nonSecureZone : zone.getNonSecureZones()) {
                 if (nonSecureZone.getId().equals(zoneId)) {
                     referencingZones.add(zone);
                     break;
@@ -266,7 +266,7 @@ public class ZoneService {
             }
 
             // 보안 Zone으로 참조되는지 확인
-            for (Zone secureZone : zone.getSecureZones()) {
+            for (ZoneObject secureZone : zone.getSecureZones()) {
                 if (secureZone.getId().equals(zoneId)) {
                     referencingZones.add(zone);
                     break;
@@ -290,13 +290,13 @@ public class ZoneService {
         log.info("Zone 삭제 시작: ID={}", id);
 
         // Zone 존재 여부 확인
-        Zone zone = findById(id);
+        ZoneObject zone = findById(id);
 
         // 참조 관계 확인 (다른 Zone에서 참조 중인지 확인)
         ZoneReferenceInfo referenceInfo = checkZoneReferences(id);
         if (referenceInfo.isReferenced()) {
             String referencingZoneNames = referenceInfo.getReferencingZones().stream()
-                    .map(Zone::getName)
+                    .map(ZoneObject::getName)
                     .collect(Collectors.joining(", "));
 
             log.warn("Zone 삭제 실패: 다른 Zone에서 참조 중입니다. Zone={}, 참조 Zone 목록: {}",
@@ -336,9 +336,9 @@ public class ZoneService {
      */
     public static class ZoneReferenceInfo {
         private final boolean isReferenced;
-        private final List<Zone> referencingZones;
+        private final List<ZoneObject> referencingZones;
 
-        public ZoneReferenceInfo(boolean isReferenced, List<Zone> referencingZones) {
+        public ZoneReferenceInfo(boolean isReferenced, List<ZoneObject> referencingZones) {
             this.isReferenced = isReferenced;
             this.referencingZones = referencingZones;
         }
@@ -347,7 +347,7 @@ public class ZoneService {
             return isReferenced;
         }
 
-        public List<Zone> getReferencingZones() {
+        public List<ZoneObject> getReferencingZones() {
             return referencingZones;
         }
     }

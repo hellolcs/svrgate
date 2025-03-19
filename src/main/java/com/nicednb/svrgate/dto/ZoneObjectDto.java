@@ -9,7 +9,7 @@ import java.util.List;
 
 @Getter
 @Setter
-public class ZoneDto {
+public class ZoneObjectDto {
 
     private Long id;
 

@@ -12,8 +12,8 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "zones")
-public class Zone {
+@Table(name = "zone_objects")
+public class ZoneObject {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,20 +28,20 @@ public class Zone {
     // 비보안Zone - 다대다 관계
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-        name = "zone_nonsecure_mappings",
-        joinColumns = @JoinColumn(name = "zone_id"),
-        inverseJoinColumns = @JoinColumn(name = "nonsecure_zone_id")
+        name = "zone_object_nonsecure_mappings",
+        joinColumns = @JoinColumn(name = "zone_object_id"),
+        inverseJoinColumns = @JoinColumn(name = "nonsecure_zone_object_id")
     )
-    private Set<Zone> nonSecureZones = new HashSet<>();
+    private Set<ZoneObject> nonSecureZones = new HashSet<>();
 
     // 보안Zone - 다대다 관계
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-        name = "zone_secure_mappings",
-        joinColumns = @JoinColumn(name = "zone_id"),
-        inverseJoinColumns = @JoinColumn(name = "secure_zone_id")
+        name = "zone_object_secure_mappings",
+        joinColumns = @JoinColumn(name = "zone_object_id"),
+        inverseJoinColumns = @JoinColumn(name = "secure_zone_object_id")
     )
-    private Set<Zone> secureZones = new HashSet<>();
+    private Set<ZoneObject> secureZones = new HashSet<>();
 
     @Column(nullable = false)
     private boolean active = true; // 연동여부(변경됨)
@@ -55,7 +55,7 @@ public class Zone {
             return "";
         }
         return nonSecureZones.stream()
-                .map(Zone::getName)
+                .map(ZoneObject::getName)
                 .sorted()
                 .reduce((a, b) -> a + ", " + b)
                 .orElse("");
@@ -67,7 +67,7 @@ public class Zone {
             return "";
         }
         return secureZones.stream()
-                .map(Zone::getName)
+                .map(ZoneObject::getName)
                 .sorted()
                 .reduce((a, b) -> a + ", " + b)
                 .orElse("");
