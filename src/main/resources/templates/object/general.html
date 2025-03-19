@@ -130,7 +130,7 @@
                         <div class="form-group row mb-3">
                             <label for="zoneId" class="col-sm-4 col-form-label">Zone:</label>
                             <div class="col-sm-8">
-                                <select class="form-control select2" id="zoneId" name="zoneId" required>
+                                <select class="form-control select2" id="zoneId" name="zoneId">
                                     <option value="">선택하세요</option>
                                     <option th:each="zone : ${allZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
                                 </select>
