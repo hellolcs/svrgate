@@ -163,14 +163,14 @@ public class AccountService implements UserDetailsService {
         // 비밀번호가 입력된 경우에만 업데이트
         if (StringUtils.hasText(accountDto.getPassword())) {
             log.debug("계정 비밀번호 변경: username={}", accountDto.getUsername());
-            
+
             // 비밀번호 규칙 검증
             if (!validatePassword(accountDto.getPassword())) {
                 log.warn("계정 업데이트 실패: 비밀번호가 규칙에 맞지 않음 - {}", accountDto.getUsername());
                 errorMessage.append(getPasswordRules());
                 return false;
             }
-            
+
             account.setPassword(passwordEncoder.encode(accountDto.getPassword()));
             account.setLastPasswordChangeTime(LocalDateTime.now());
         } else {
@@ -201,23 +201,24 @@ public class AccountService implements UserDetailsService {
     @Transactional
     public boolean saveAccount(Account account, StringBuilder errorMessage) {
         // 새 계정 또는 비밀번호 변경 시 검증
-        if (account.getId() == null || (account.getPassword() != null && !account.getPassword().startsWith("{bcrypt}"))) {
+        if (account.getId() == null
+                || (account.getPassword() != null && !account.getPassword().startsWith("{bcrypt}"))) {
             // 비밀번호 규칙 검증
             if (!validatePassword(account.getPassword())) {
                 log.warn("계정 저장 실패: 비밀번호가 규칙에 맞지 않음 - {}", account.getUsername());
                 errorMessage.append(getPasswordRules());
                 return false;
             }
-            
+
             account.setPassword(passwordEncoder.encode(account.getPassword()));
             account.setLastPasswordChangeTime(LocalDateTime.now());
         }
-        
+
         boolean isNew = (account.getId() == null);
         Account savedAccount = accountRepository.save(account);
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         String clientIp = getCurrentClientIp();
-        
+
         if (isNew) {
             // 계정 생성 로깅 - 형식 통일
             operationLogService.logOperation(
@@ -291,7 +292,7 @@ public class AccountService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("계정을 찾을 수 없습니다: " + id));
     }
 
-   /**
+    /**
      * 개인 설정 업데이트 - exception 대신 boolean 반환으로 변경
      */
     @Transactional
@@ -320,14 +321,14 @@ public class AccountService implements UserDetailsService {
         // 비밀번호가 입력된 경우에만 업데이트
         if (StringUtils.hasText(personalSettingDto.getPassword())) {
             log.debug("계정 비밀번호 변경: username={}", personalSettingDto.getUsername());
-            
+
             // 비밀번호 규칙 검증
             if (!validatePassword(personalSettingDto.getPassword())) {
                 log.warn("개인설정 업데이트 실패: 비밀번호가 규칙에 맞지 않음 - {}", personalSettingDto.getUsername());
                 errorMessage.append(getPasswordRules());
                 return false;
             }
-            
+
             account.setPassword(passwordEncoder.encode(personalSettingDto.getPassword()));
             account.setLastPasswordChangeTime(LocalDateTime.now());
         } else {
@@ -359,7 +360,7 @@ public class AccountService implements UserDetailsService {
         return passwordEncoder.matches(rawPassword, account.getPassword());
     }
 
-   /**
+    /**
      * 계정의 비밀번호를 업데이트합니다. - exception 대신 boolean 반환으로 변경
      */
     @Transactional
@@ -370,7 +371,7 @@ public class AccountService implements UserDetailsService {
             errorMessage.append(getPasswordRules());
             return false;
         }
-        
+
         account.setPassword(passwordEncoder.encode(newPassword));
         account.setLastPasswordChangeTime(LocalDateTime.now());
         accountRepository.save(account);
@@ -379,8 +380,21 @@ public class AccountService implements UserDetailsService {
         return true;
     }
 
-public List<Account> searchAccounts(String searchText) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'searchAccounts'");
-}
+    /**
+     * 검색어를 기반으로 계정 검색
+     * 
+     * @param searchText 검색어
+     * @return 검색 결과 계정 목록
+     */
+    public List<Account> searchAccounts(String searchText) {
+        log.debug("계정 검색: searchText={}", searchText);
+
+        if (searchText == null || searchText.trim().isEmpty()) {
+            // 검색어가 없으면 전체 계정 목록 반환
+            return accountRepository.findAll();
+        }
+
+        // 검색어가 있으면 Repository에 검색 쿼리 요청
+        return accountRepository.searchByKeyword(searchText.trim());
+    }
 }
