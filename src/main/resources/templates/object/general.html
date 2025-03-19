@@ -40,21 +40,21 @@
         
         <!-- 검색 및 필터링 폼 -->
         <form action="/object/general" method="get">
-            <div th:replace="layout/table-controls :: search-form(
+            <div th:replace="~{layout/table-controls :: search-form(
                 url='/object/general', 
                 searchText=${searchText}, 
                 filterName=null, 
                 filterValues=null, 
                 filterCurrent=null, 
-                size=${size})">
+                size=${size})}">
             </div>
         </form>
         
         <!-- 전체 개수 및 추가 버튼 -->
-        <div th:replace="layout/table-controls :: count-add-button(
+        <div th:replace="~{layout/table-controls :: count-add-button(
             totalItems=${generalObjects.totalElements}, 
             addBtnLabel='일반 객체 추가', 
-            addBtnAction='$(\'#addGeneralObjectModal\').modal(\'show\')')">
+            addBtnAction='$(\'#addGeneralObjectModal\').modal(\'show\')')}">
         </div>
 
         <!-- 일반 객체 목록 테이블 -->
@@ -90,13 +90,13 @@
         </table>
 
         <!-- 페이징 컨트롤 -->
-        <div th:replace="layout/table-controls :: pagination(
+        <div th:replace="~{layout/table-controls :: pagination(
             pageData=${generalObjects}, 
             url='/object/general', 
             searchText=${searchText}, 
             filterName=null, 
             filterValue=null, 
-            size=${size})">
+            size=${size})}">
         </div>
     </div>
 
