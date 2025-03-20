@@ -3,12 +3,36 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{/layout/layout}">
 <head>
-    <title>연동서버객체</title>
+    <title>연동서버 객체</title>
+    <link rel="stylesheet" th:href="@{/css/table.css}">
+    <!-- Select2 CSS -->
+    <link rel="stylesheet" th:href="@{/css/select2.min.css}" />
+    <link rel="stylesheet" th:href="@{/css/select2-bootstrap-5-theme.min.css}" />
+    <th:block th:replace="~{layout/table-controls :: table-styles}"></th:block>
+    <style>
+        /* 모달 내부 폼 그룹 스타일 */
+        .modal .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        /* 모달 헤더 배경색 */
+        .modal-header {
+            background-color: #0b2e5d;
+            color: white;
+        }
+        
+        /* 연동 버튼 스타일 */
+        .btn-sync {
+            padding: 0.1rem 0.3rem;
+            font-size: 0.7rem;
+            margin-right: 5px;
+        }
+    </style>
 </head>
 <body>
 <div layout:fragment="content">
     <div class="container mt-4" style="max-width: 1800px;">
-        <h2>연동서버객체</h2>
+        <h2>연동서버 객체</h2>
         
         <!-- 알림 메시지 출력 -->
         <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
@@ -21,17 +45,217 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         
-        <!-- 임시 콘텐츠 -->
-        <div class="card">
-            <div class="card-header" style="background-color: #E1F6FA;">
-                <h5 class="mb-0">연동서버객체 관리</h5>
+        <!-- 검색 및 필터링 폼 -->
+        <form action="/object/server" method="get">
+            <div th:replace="~{layout/table-controls :: search-form(
+                url='/object/server', 
+                searchText=${searchText}, 
+                filterName='active', 
+                filterValues=${filterValues}, 
+                filterCurrent=${active}, 
+                size=${size}, 
+                placeholder='서버명 또는 IP 검색')}">
             </div>
-            <div class="card-body">
-                <p>이 페이지에서는 연동서버객체를 관리할 수 있습니다.</p>
-                <p>추후 실제 기능이 구현될 예정입니다.</p>
+        </form>
+        
+        <!-- 전체 개수 및 추가 버튼 -->
+        <div th:replace="~{layout/table-controls :: count-add-button(
+            totalItems=${serverObjects.totalElements}, 
+            addBtnLabel='연동서버 객체 추가', 
+            addBtnAction='$(\'#addServerObjectModal\').modal(\'show\')')}">
+        </div>
+
+        <!-- 연동서버 객체 목록 테이블 -->
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th style="width: 60px;">ID</th>
+                    <th style="width: 150px;">서버명</th>
+                    <th style="width: 150px;">IP 주소</th>
+                    <th style="width: 150px;">Zone</th>
+                    <th style="width: 90px;">연동여부</th>
+                    <th style="width: 150px;">마지막 연동 시각</th>
+                    <th>설명</th>
+                    <th style="width: 160px;">작업</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="serverObject : ${serverObjects.content}" th:data-id="${serverObject.id}">
+                    <td th:text="${serverObject.id}">1</td>
+                    <td th:text="${serverObject.name}">ServerName</td>
+                    <td th:text="${serverObject.ipAddress}">192.168.1.1</td>
+                    <td th:text="${serverObject.zoneName}">Zone명</td>
+                    <td>
+                        <span th:if="${serverObject.active}" class="badge bg-success">연동</span>
+                        <span th:unless="${serverObject.active}" class="badge bg-danger">미연동</span>
+                    </td>
+                    <td th:text="${serverObject.lastSyncTimeFormatted}">-</td>
+                    <td th:text="${serverObject.description}">설명</td>
+                    <td>
+                        <form th:if="${serverObject.active}" 
+                              th:action="@{/object/server/sync/{id}(id=${serverObject.id})}" 
+                              method="post" 
+                              style="display:inline;">
+                            <button type="submit" class="btn btn-outline-success btn-sync" 
+                                    title="서버와 연동">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </button>
+                        </form>
+                        <button type="button" class="btn btn-outline-primary btn-action" 
+                                onclick="editServerObject(this.getAttribute('data-id'))" th:data-id="${serverObject.id}">수정</button>
+                        <button type="button" class="btn btn-outline-danger btn-action" 
+                                onclick="deleteServerObject(this.getAttribute('data-id'))" th:data-id="${serverObject.id}">삭제</button>
+                    </td>
+                </tr>
+                <tr th:if="${serverObjects.empty}">
+                    <td colspan="8" class="text-center">등록된 연동서버 객체가 없습니다.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 페이징 컨트롤 -->
+        <div th:replace="~{layout/table-controls :: pagination(
+            pageData=${serverObjects}, 
+            url='/object/server', 
+            searchText=${searchText}, 
+            filterName='active', 
+            filterValue=${active}, 
+            size=${size})}">
+        </div>
+    </div>
+
+    <!-- 연동서버 객체 추가 모달 -->
+    <div class="modal fade" id="addServerObjectModal" tabindex="-1" aria-labelledby="addServerObjectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addServerObjectModalLabel">연동서버 객체 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addServerObjectForm" th:action="@{/object/server/add}" method="post">
+                        <div class="form-group row mb-3">
+                            <label for="name" class="col-sm-4 col-form-label">서버명:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="name" name="name" required
+                                       pattern="^[a-zA-Z0-9_-]+$" 
+                                       title="영문자, 숫자, 대시(-), 언더바(_)만 허용됩니다.">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="ipAddress" class="col-sm-4 col-form-label">IP 주소:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="ipAddress" name="ipAddress" required
+                                       pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" 
+                                       title="유효한 IPv4 주소 형식이 아닙니다.">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="zoneId" class="col-sm-4 col-form-label">Zone:</label>
+                            <div class="col-sm-8">
+                                <select class="form-control select2" id="zoneId" name="zoneId" required>
+                                    <option value="">선택하세요</option>
+                                    <option th:each="zone : ${allZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="active" class="col-sm-4 col-form-label">연동여부:</label>
+                            <div class="col-sm-8">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="active" name="active" checked>
+                                    <label class="form-check-label" for="active">연동</label>
+                                </div>
+                                <small class="form-text text-muted">연동 여부를 설정합니다. 비활성화 시 연동이 수행되지 않습니다.</small>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="description" class="col-sm-4 col-form-label">설명:</label>
+                            <div class="col-sm-8">
+                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" form="addServerObjectForm" class="btn btn-primary">저장</button>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- 연동서버 객체 수정 모달 -->
+    <div class="modal fade" id="editServerObjectModal" tabindex="-1" aria-labelledby="editServerObjectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editServerObjectModalLabel">연동서버 객체 수정</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editServerObjectForm" th:action="@{/object/server/update}" method="post">
+                        <input type="hidden" id="edit-id" name="id">
+                        <div class="form-group row mb-3">
+                            <label for="edit-name" class="col-sm-4 col-form-label">서버명:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="edit-name" name="name" required
+                                       pattern="^[a-zA-Z0-9_-]+$" 
+                                       title="영문자, 숫자, 대시(-), 언더바(_)만 허용됩니다.">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-ipAddress" class="col-sm-4 col-form-label">IP 주소:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="edit-ipAddress" name="ipAddress" required
+                                       pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" 
+                                       title="유효한 IPv4 주소 형식이 아닙니다.">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-zoneId" class="col-sm-4 col-form-label">Zone:</label>
+                            <div class="col-sm-8">
+                                <select class="form-control select2" id="edit-zoneId" name="zoneId" required>
+                                    <option value="">선택하세요</option>
+                                    <option th:each="zone : ${allZones}" th:value="${zone.id}" th:text="${zone.name}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-active" class="col-sm-4 col-form-label">연동여부:</label>
+                            <div class="col-sm-8">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="edit-active" name="active">
+                                    <label class="form-check-label" for="edit-active">연동</label>
+                                </div>
+                                <small class="form-text text-muted">연동 여부를 설정합니다. 비활성화 시 연동이 수행되지 않습니다.</small>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="edit-description" class="col-sm-4 col-form-label">설명:</label>
+                            <div class="col-sm-8">
+                                <textarea class="form-control" id="edit-description" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" form="editServerObjectForm" class="btn btn-primary">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 연동서버 객체 삭제 폼 (히든) -->
+    <form id="deleteServerObjectForm" th:action="@{/object/server/delete}" method="post" style="display: none;">
+        <input type="hidden" id="deleteServerObjectId" name="id">
+    </form>
+
+    <!-- Scripts -->
+    <script th:src="@{/js/jquery-3.6.0.min.js}"></script>
+    <script th:src="@{/js/select2.min.js}"></script>
+    <script th:src="@{/js/server-object.js}"></script>
 </div>
 </body>
 </html>

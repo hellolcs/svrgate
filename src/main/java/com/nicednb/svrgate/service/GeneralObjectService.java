@@ -5,6 +5,7 @@ import com.nicednb.svrgate.entity.GeneralObject;
 import com.nicednb.svrgate.entity.ZoneObject;
 import com.nicednb.svrgate.repository.GeneralObjectRepository;
 import com.nicednb.svrgate.repository.NetworkObjectRepository;
+import com.nicednb.svrgate.repository.ServerObjectRepository;
 import com.nicednb.svrgate.repository.ZoneObjectRepository;
 import com.nicednb.svrgate.util.PageConversionUtil;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,8 @@ public class GeneralObjectService {
     private final NetworkObjectRepository networkObjectRepository; // 추가: 네트워크 객체 중복 체크를 위해
     private final ZoneObjectRepository zoneObjectRepository;
     private final OperationLogService operationLogService;
+    // IP 중복 체크를 위해 ServerObjectRepository 추가
+    private final ServerObjectRepository serverObjectRepository;
 
     /**
      * 모든 일반 객체 조회하여 DTO로 반환
@@ -120,7 +123,7 @@ public class GeneralObjectService {
      * IP 중복 체크 (객체 타입에 관계없이 전체 체크)
      * 
      * @param ipAddress 체크할 IP 주소
-     * @param objectId 수정 시 자기 자신 제외를 위한 ID (새 객체 생성 시 null)
+     * @param objectId  수정 시 자기 자신 제외를 위한 ID (새 객체 생성 시 null)
      * @throws IllegalArgumentException 중복된 IP가 존재하는 경우
      */
     @Transactional(readOnly = true)
@@ -129,25 +132,36 @@ public class GeneralObjectService {
         if (objectId == null) {
             generalObjectRepository.findByIpAddress(ipAddress)
                     .ifPresent(obj -> {
-                        throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + ipAddress + " (일반 객체: " + obj.getName() + ")");
+                        throw new IllegalArgumentException(
+                                "이미 사용 중인 IP 주소입니다: " + ipAddress + " (일반 객체: " + obj.getName() + ")");
                     });
         } else {
             generalObjectRepository.findByIpAddressAndIdNot(ipAddress, objectId)
                     .ifPresent(obj -> {
-                        throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + ipAddress + " (일반 객체: " + obj.getName() + ")");
+                        throw new IllegalArgumentException(
+                                "이미 사용 중인 IP 주소입니다: " + ipAddress + " (일반 객체: " + obj.getName() + ")");
                     });
         }
 
         // 네트워크 객체 내에서 IP 중복 체크
         networkObjectRepository.findByIpAddress(ipAddress)
                 .ifPresent(obj -> {
-                    throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + ipAddress + " (네트워크 객체: " + obj.getName() + ")");
+                    throw new IllegalArgumentException(
+                            "이미 사용 중인 IP 주소입니다: " + ipAddress + " (네트워크 객체: " + obj.getName() + ")");
+                });
+
+        // 연동서버 객체 내에서 IP 중복 체크 (추가)
+        serverObjectRepository.findByIpAddress(ipAddress)
+                .ifPresent(obj -> {
+                    throw new IllegalArgumentException(
+                            "이미 사용 중인 IP 주소입니다: " + ipAddress + " (연동서버 객체: " + obj.getName() + ")");
                 });
 
         // 방화벽 IP와의 중복 체크 (Zone의 firewallIp와 중복되지 않도록)
         zoneObjectRepository.findByFirewallIp(ipAddress)
                 .ifPresent(obj -> {
-                    throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + ipAddress + " (Zone 방화벽IP: " + obj.getName() + ")");
+                    throw new IllegalArgumentException(
+                            "이미 사용 중인 IP 주소입니다: " + ipAddress + " (Zone 방화벽IP: " + obj.getName() + ")");
                 });
     }
 
