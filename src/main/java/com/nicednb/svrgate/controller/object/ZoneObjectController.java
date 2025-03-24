@@ -35,10 +35,138 @@ public class ZoneObjectController {
     private final ZoneObjectService zoneService;
     private final AccountService accountService;
 
-    // 기존 메서드는 유지하고 syncWithFirewall 메서드만 수정합니다...
+    @GetMapping
+    public String zoneObjects(Model model,
+            @RequestParam(value = "searchText", required = false) String searchText,
+            @RequestParam(value = "active", required = false) Boolean active,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        log.info("Zone 페이지 접근");
+
+        // 페이징 및 검색 처리 - DTO 사용
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ZoneObjectDto> zones = zoneService.searchZonesAsDto(searchText, active, pageable);
+
+        // 모든 Zone 목록 (드롭다운 선택용) - 연동여부와 상관없이 모든 Zone - DTO 사용
+        List<ZoneObjectDto> allZones = zoneService.findAllZonesForDropdownAsDto();
+
+        model.addAttribute("zones", zones);
+        model.addAttribute("allZones", allZones);
+        model.addAttribute("searchText", searchText);
+        model.addAttribute("active", active);
+        model.addAttribute("size", size);
+        model.addAttribute("zoneDto", new ZoneObjectDto());
+
+        // 필터 값 설정
+        List<Map<String, Object>> filterValues = new ArrayList<>();
+        Map<String, Object> trueOption = new HashMap<>();
+        trueOption.put("value", "true");
+        trueOption.put("label", "연동");
+        filterValues.add(trueOption);
+
+        Map<String, Object> falseOption = new HashMap<>();
+        falseOption.put("value", "false");
+        falseOption.put("label", "미연동");
+        filterValues.add(falseOption);
+
+        model.addAttribute("filterValues", filterValues);
+
+        return "object/zone";
+    }
 
     /**
-     * 방화벽 동기화
+     * Zone 정보 가져오기 (Ajax)
+     */
+    @GetMapping("/{id}")
+    @ResponseBody
+    public ZoneObjectDto getZoneInfo(@PathVariable("id") Long id) {
+        log.info("Zone 정보 요청: {}", id);
+        return zoneService.findByIdAsDto(id);
+    }
+
+    /**
+     * Zone 추가
+     */
+    @PostMapping("/add")
+    public String addZone(@Valid @ModelAttribute("zoneDto") ZoneObjectDto zoneDto,
+            BindingResult bindingResult,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes) {
+        log.info("Zone 추가 요청: {}", zoneDto.getName());
+
+        if (bindingResult.hasErrors()) {
+            log.warn("Zone 추가 폼 유효성 검사 실패: {}", bindingResult.getAllErrors());
+            redirectAttributes.addFlashAttribute("errorMessage", "입력 값을 확인해주세요.");
+            return "redirect:/object/zone";
+        }
+
+        try {
+            String ipAddress = accountService.getClientIpAddress(request);
+            zoneService.createZone(zoneDto, ipAddress);
+            redirectAttributes.addFlashAttribute("successMessage", "Zone이 성공적으로 추가되었습니다.");
+            return "redirect:/object/zone";
+        } catch (Exception e) {
+            log.error("Zone 추가 중 오류 발생: {}", e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Zone 추가 중 오류가 발생했습니다: " + e.getMessage());
+            return "redirect:/object/zone";
+        }
+    }
+
+    /**
+     * Zone 수정
+     */
+    @PostMapping("/update")
+    public String updateZone(@Valid @ModelAttribute("zoneDto") ZoneObjectDto zoneDto,
+            BindingResult bindingResult,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes) {
+        log.info("Zone 수정 요청: {}", zoneDto.getName());
+
+        if (bindingResult.hasErrors()) {
+            log.warn("Zone 수정 폼 유효성 검사 실패: {}", bindingResult.getAllErrors());
+            redirectAttributes.addFlashAttribute("errorMessage", "입력 값을 확인해주세요.");
+            return "redirect:/object/zone";
+        }
+
+        try {
+            String ipAddress = accountService.getClientIpAddress(request);
+            zoneService.updateZone(zoneDto, ipAddress);
+            redirectAttributes.addFlashAttribute("successMessage", "Zone이 성공적으로 수정되었습니다.");
+            return "redirect:/object/zone";
+        } catch (Exception e) {
+            log.error("Zone 수정 중 오류 발생: {}", e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Zone 수정 중 오류가 발생했습니다: " + e.getMessage());
+            return "redirect:/object/zone";
+        }
+    }
+
+    /**
+     * Zone 삭제
+     */
+    @PostMapping("/delete")
+    public String deleteZone(@RequestParam("id") Long id,
+            HttpServletRequest request,
+            RedirectAttributes redirectAttributes) {
+        log.info("Zone 삭제 요청: {}", id);
+
+        try {
+            String ipAddress = accountService.getClientIpAddress(request);
+            zoneService.deleteZone(id, ipAddress);
+            redirectAttributes.addFlashAttribute("successMessage", "Zone이 성공적으로 삭제되었습니다.");
+        } catch (IllegalStateException e) {
+            // 참조 중인 경우 발생하는 예외 처리
+            log.error("Zone 삭제 중 참조 오류 발생: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            log.error("Zone 삭제 중 오류 발생: {}", e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Zone 삭제 중 오류가 발생했습니다: " + e.getMessage());
+        }
+
+        return "redirect:/object/zone";
+    }
+
+    /**
+     * 방화벽 동기화 (TODO: 실제 구현 필요)
      */
     @PostMapping("/sync/{id}")
     public String syncWithFirewall(@PathVariable("id") Long id, 
