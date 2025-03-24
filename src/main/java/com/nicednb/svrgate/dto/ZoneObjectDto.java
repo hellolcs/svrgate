@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -26,6 +27,12 @@ public class ZoneObjectDto {
     private List<Long> secureZoneIds; // 보안Zone ID 목록
     private boolean active; // 사용 여부
     private String description; // 설명
+    
+    // 마지막 연동 시각 (추가)
+    private LocalDateTime lastSyncTime;
+    
+    // 마지막 연동 시각 표시용 (추가)
+    private String lastSyncTimeFormatted;
 
     // 화면 표시용 필드
     private String nonSecureZoneNames;

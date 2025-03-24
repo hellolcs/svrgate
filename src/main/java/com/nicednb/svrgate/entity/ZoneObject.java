@@ -3,6 +3,7 @@ package com.nicednb.svrgate.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -13,8 +14,8 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 @Table(name = "zone_objects")
-public class ZoneObject {
 
+public class ZoneObject {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -44,10 +45,14 @@ public class ZoneObject {
     private Set<ZoneObject> secureZones = new HashSet<>();
 
     @Column(nullable = false)
-    private boolean active = true; // 연동여부(변경됨)
+    private boolean active = true; // 연동여부
 
     @Column(length = 255, columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-    private String description; // 설명 (utf8mb4 지원 추가)
+    private String description; // 설명
+    
+    // 마지막 연동 시각 (추가)
+    @Column
+    private LocalDateTime lastSyncTime;
     
     // 선택된 Zone들의 ID 목록을 문자열로 반환 (UI 표시용)
     public String getNonSecureZoneNames() {

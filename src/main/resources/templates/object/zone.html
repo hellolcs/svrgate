@@ -20,6 +20,13 @@
             background-color: #0b2e5d;
             color: white;
         }
+        
+        /* 연동 버튼 스타일 */
+        .btn-sync {
+            padding: 0.1rem 0.3rem;
+            font-size: 0.7rem;
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
@@ -66,9 +73,10 @@
                     <th style="width: 150px;">방화벽IP</th>
                     <th>비보안Zone</th>
                     <th>보안Zone</th>
-                    <th style="width: 100px;">연동여부</th>
+                    <th style="width: 90px;">연동여부</th>
+                    <th style="width: 150px;">마지막 연동 시각</th>
                     <th style="width: 200px;">설명</th>
-                    <th style="width: 120px;">작업</th>
+                    <th style="width: 160px;">작업</th>
                 </tr>
             </thead>
             <tbody>
@@ -76,14 +84,24 @@
                     <td th:text="${zone.id}">1</td>
                     <td th:text="${zone.name}">ZoneName</td>
                     <td th:text="${zone.firewallIp}">192.168.1.1</td>
-                    <td th:text="${zone.getNonSecureZoneNames}">비보안 Zone 목록</td>
-                    <td th:text="${zone.getSecureZoneNames}">보안 Zone 목록</td>
+                    <td th:text="${zone.nonSecureZoneNames}">비보안 Zone 목록</td>
+                    <td th:text="${zone.secureZoneNames}">보안 Zone 목록</td>
                     <td>
                         <span th:if="${zone.active}" class="badge bg-success">연동</span>
                         <span th:unless="${zone.active}" class="badge bg-danger">미연동</span>
                     </td>
+                    <td th:text="${zone.lastSyncTimeFormatted}">-</td>
                     <td th:text="${zone.description}">설명</td>
                     <td>
+                        <form th:if="${zone.active}" 
+                              th:action="@{/object/zone/sync/{id}(id=${zone.id})}" 
+                              method="post" 
+                              style="display:inline;">
+                            <button type="submit" class="btn btn-outline-success btn-sync" 
+                                    title="방화벽과 연동">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </button>
+                        </form>
                         <button type="button" class="btn btn-outline-primary btn-action" 
                                 onclick="editZone(this.getAttribute('data-id'))" th:data-id="${zone.id}">수정</button>
                         <button type="button" class="btn btn-outline-danger btn-action" 
@@ -91,7 +109,7 @@
                     </td>
                 </tr>
                 <tr th:if="${zones.empty}">
-                    <td colspan="8" class="text-center">등록된 Zone이 없습니다.</td>
+                    <td colspan="9" class="text-center">등록된 Zone이 없습니다.</td>
                 </tr>
             </tbody>
         </table>
