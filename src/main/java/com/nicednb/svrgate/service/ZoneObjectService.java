@@ -34,9 +34,8 @@ public class ZoneObjectService {
     private final NetworkObjectRepository networkObjectRepository;
     private final ServerObjectRepository serverObjectRepository;
     private final OperationLogService operationLogService;
-    
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
      * 모든 Zone 목록 조회하여 DTO로 반환
@@ -104,35 +103,55 @@ public class ZoneObjectService {
      * 방화벽 IP 중복 체크 (객체 타입에 관계없이 전체 체크)
      * 
      * @param firewallIp 체크할 방화벽 IP 주소
-     * @param zoneId 수정 시 자기 자신 제외를 위한 ID (새 객체 생성 시 null)
+     * @param zoneId     수정 시 자기 자신 제외를 위한 ID (새 객체 생성 시 null)
      * @throws IllegalArgumentException 중복된 IP가 존재하는 경우
      */
     @Transactional(readOnly = true)
     public void checkDuplicateFirewallIp(String firewallIp, Long zoneId) {
+        log.debug("방화벽 IP 중복 검사: firewallIp={}, zoneId={}", firewallIp, zoneId);
+
         // 일반 객체의 IP와 중복 체크
         generalObjectRepository.findByIpAddress(firewallIp)
                 .ifPresent(obj -> {
-                    throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + firewallIp + " (일반 객체: " + obj.getName() + ")");
+                    log.warn("IP 중복 발견 (일반 객체): {}, 객체명: {}", firewallIp, obj.getName());
+                    throw new IllegalArgumentException(
+                            "이미 사용 중인 IP 주소입니다: " + firewallIp + " (일반 객체: " + obj.getName() + ")");
                 });
 
         // 네트워크 객체의 IP와 중복 체크
         networkObjectRepository.findByIpAddress(firewallIp)
                 .ifPresent(obj -> {
-                    throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + firewallIp + " (네트워크 객체: " + obj.getName() + ")");
+                    log.warn("IP 중복 발견 (네트워크 객체): {}, 객체명: {}", firewallIp, obj.getName());
+                    throw new IllegalArgumentException(
+                            "이미 사용 중인 IP 주소입니다: " + firewallIp + " (네트워크 객체: " + obj.getName() + ")");
+                });
+
+        // 연동서버 객체의 IP와 중복 체크
+        serverObjectRepository.findByIpAddress(firewallIp)
+                .ifPresent(obj -> {
+                    log.warn("IP 중복 발견 (연동서버 객체): {}, 객체명: {}", firewallIp, obj.getName());
+                    throw new IllegalArgumentException(
+                            "이미 사용 중인 IP 주소입니다: " + firewallIp + " (연동서버 객체: " + obj.getName() + ")");
                 });
 
         // Zone의 방화벽 IP 중복 체크
         if (zoneId == null) {
             zoneRepository.findByFirewallIp(firewallIp)
                     .ifPresent(obj -> {
-                        throw new IllegalArgumentException("이미 사용 중인 방화벽 IP입니다: " + firewallIp + " (Zone: " + obj.getName() + ")");
+                        log.warn("방화벽 IP 중복 발견 (Zone): {}, Zone명: {}", firewallIp, obj.getName());
+                        throw new IllegalArgumentException(
+                                "이미 사용 중인 방화벽 IP입니다: " + firewallIp + " (Zone: " + obj.getName() + ")");
                     });
         } else {
             zoneRepository.findByFirewallIpAndIdNot(firewallIp, zoneId)
                     .ifPresent(obj -> {
-                        throw new IllegalArgumentException("이미 사용 중인 방화벽 IP입니다: " + firewallIp + " (Zone: " + obj.getName() + ")");
+                        log.warn("방화벽 IP 중복 발견 (Zone): {}, Zone명: {}", firewallIp, obj.getName());
+                        throw new IllegalArgumentException(
+                                "이미 사용 중인 방화벽 IP입니다: " + firewallIp + " (Zone: " + obj.getName() + ")");
                     });
         }
+
+        log.debug("방화벽 IP 중복 검사 완료: 중복 없음");
     }
 
     /**
@@ -184,7 +203,7 @@ public class ZoneObjectService {
         dto.setActive(zone.isActive());
         dto.setDescription(zone.getDescription());
         dto.setLastSyncTime(zone.getLastSyncTime());
-        
+
         // 마지막 연동 시각 포맷팅 (추가)
         if (zone.getLastSyncTime() != null) {
             dto.setLastSyncTimeFormatted(zone.getLastSyncTime().format(DATE_TIME_FORMATTER));
@@ -225,6 +244,7 @@ public class ZoneObjectService {
         // Zone명 중복 체크
         zoneRepository.findByName(zoneDto.getName())
                 .ifPresent(zone -> {
+                    log.warn("Zone명 중복 발견: {}", zoneDto.getName());
                     throw new IllegalArgumentException("이미 사용 중인 Zone명입니다: " + zoneDto.getName());
                 });
 
@@ -241,6 +261,7 @@ public class ZoneObjectService {
             intersection.retainAll(secureSet);
 
             if (!intersection.isEmpty()) {
+                log.warn("Zone이 보안Zone과 비보안Zone에 동시에 속함");
                 throw new IllegalArgumentException("Zone은 보안Zone과 비보안Zone에 동시에 속할 수 없습니다.");
             }
         }
@@ -278,6 +299,7 @@ public class ZoneObjectService {
         // Zone명 중복 체크 (자기 자신 제외)
         zoneRepository.findByNameAndIdNot(zoneDto.getName(), zoneDto.getId())
                 .ifPresent(zone -> {
+                    log.warn("Zone명 중복 발견 (수정): {}", zoneDto.getName());
                     throw new IllegalArgumentException("이미 사용 중인 Zone명입니다: " + zoneDto.getName());
                 });
 
@@ -294,6 +316,7 @@ public class ZoneObjectService {
             intersection.retainAll(secureSet);
 
             if (!intersection.isEmpty()) {
+                log.warn("Zone이 보안Zone과 비보안Zone에 동시에 속함 (수정)");
                 throw new IllegalArgumentException("Zone은 보안Zone과 비보안Zone에 동시에 속할 수 없습니다.");
             }
         }
@@ -301,6 +324,7 @@ public class ZoneObjectService {
         // 자기 자신을 보안/비보안 Zone으로 설정하는지 확인
         if ((zoneDto.getNonSecureZoneIds() != null && zoneDto.getNonSecureZoneIds().contains(zoneDto.getId())) ||
                 (zoneDto.getSecureZoneIds() != null && zoneDto.getSecureZoneIds().contains(zoneDto.getId()))) {
+            log.warn("자기 자신을 보안/비보안 Zone으로 설정 시도: {}", zoneDto.getId());
             throw new IllegalArgumentException("자기 자신을 보안/비보안 Zone으로 설정할 수 없습니다.");
         }
 
@@ -413,31 +437,30 @@ public class ZoneObjectService {
         log.info("Zone 삭제 완료: {}", zone.getName());
     }
 
-
     /**
      * 방화벽과 RestAPI 통신
      * 
-     * @param id Zone ID
+     * @param id       Zone ID
      * @param clientIp 클라이언트 IP 주소
      * @return 연동된 Zone 객체 DTO
      */
     @Transactional
     public ZoneObjectDto syncWithFirewall(Long id, String clientIp) {
         log.info("방화벽 동기화 시작: zoneId={}", id);
-        
+
         // Zone 존재 여부 확인
         ZoneObject zoneObject = findById(id);
-        
+
         // 연동 여부 확인
         if (!zoneObject.isActive()) {
             throw new IllegalStateException("연동이 비활성화된 Zone입니다: " + zoneObject.getName());
         }
-        
+
         try {
             // TODO: 실제 방화벽과의 연동 로직 구현 (현재는 마지막 연동 시각만 업데이트)
             zoneObject.setLastSyncTime(LocalDateTime.now());
             ZoneObject updatedZoneObject = zoneRepository.save(zoneObject);
-            
+
             // 로그 기록
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
             operationLogService.logOperation(
@@ -447,13 +470,13 @@ public class ZoneObjectService {
                     "Zone명: " + updatedZoneObject.getName(),
                     "객체관리",
                     "방화벽 연동 수행");
-            
+
             log.info("방화벽 연동 완료: {}", updatedZoneObject.getName());
             return convertToDto(updatedZoneObject);
-            
+
         } catch (Exception e) {
             log.error("방화벽 연동 실패: {}", e.getMessage(), e);
-            
+
             // 로그 기록 (실패)
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
             operationLogService.logOperation(
@@ -463,7 +486,7 @@ public class ZoneObjectService {
                     "실패 사유: " + e.getMessage(),
                     "객체관리",
                     "방화벽 연동 실패");
-            
+
             throw new RuntimeException("방화벽 연동 중 오류가 발생했습니다: " + e.getMessage(), e);
         }
     }
