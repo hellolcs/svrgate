@@ -86,15 +86,15 @@
           연동 설정
         </div>
         <div class="card-body">
-          <!-- 정책 수집주기 -->
+          <!-- 서버정책 수집주기 -->
           <div class="row mb-3">
-            <label for="policyCycle" class="col-sm-4 col-form-label">정책 수집주기</label>
+            <label for="serverPolicyCycle" class="col-sm-4 col-form-label">서버정책 수집주기</label>
             <div class="col-sm-8">
               <div class="input-group">
-                <input type="number" id="policyCycle" class="form-control" th:field="*{policyCycle}" min="1" required>
+                <input type="number" id="serverPolicyCycle" class="form-control" th:field="*{serverPolicyCycle}" min="1" required>
                 <span class="input-group-text">초</span>
               </div>
-              <div class="text-danger" th:if="${#fields.hasErrors('policyCycle')}" th:errors="*{policyCycle}"></div>
+              <div class="text-danger" th:if="${#fields.hasErrors('serverPolicyCycle')}" th:errors="*{serverPolicyCycle}"></div>
             </div>
           </div>
           
@@ -107,6 +107,30 @@
                 <span class="input-group-text">개</span>
               </div>
               <div class="text-danger" th:if="${#fields.hasErrors('concurrentServers')}" th:errors="*{concurrentServers}"></div>
+            </div>
+          </div>
+          
+          <!-- 방화벽정책 수집주기 -->
+          <div class="row mb-3">
+            <label for="firewallPolicyCycle" class="col-sm-4 col-form-label">방화벽정책 수집주기</label>
+            <div class="col-sm-8">
+              <div class="input-group">
+                <input type="number" id="firewallPolicyCycle" class="form-control" th:field="*{firewallPolicyCycle}" min="1" required>
+                <span class="input-group-text">초</span>
+              </div>
+              <div class="text-danger" th:if="${#fields.hasErrors('firewallPolicyCycle')}" th:errors="*{firewallPolicyCycle}"></div>
+            </div>
+          </div>
+          
+          <!-- 동시 수집 방화벽 수 -->
+          <div class="row mb-3">
+            <label for="concurrentFirewalls" class="col-sm-4 col-form-label">동시 수집 방화벽 수</label>
+            <div class="col-sm-8">
+              <div class="input-group">
+                <input type="number" id="concurrentFirewalls" class="form-control" th:field="*{concurrentFirewalls}" min="1" required>
+                <span class="input-group-text">개</span>
+              </div>
+              <div class="text-danger" th:if="${#fields.hasErrors('concurrentFirewalls')}" th:errors="*{concurrentFirewalls}"></div>
             </div>
           </div>
         </div>

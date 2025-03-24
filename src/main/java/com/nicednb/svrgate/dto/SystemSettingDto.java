@@ -19,11 +19,19 @@ public class SystemSettingDto {
     private Integer passwordChangeCycle;
     
     // 연동 설정
-    @NotNull(message = "정책 수집주기를 입력해주세요.")
-    @Min(value = 1, message = "정책 수집주기는 1 이상이어야 합니다.")
-    private Integer policyCycle;
+    @NotNull(message = "서버정책 수집주기를 입력해주세요.")
+    @Min(value = 1, message = "서버정책 수집주기는 1 이상이어야 합니다.")
+    private Integer serverPolicyCycle;
     
     @NotNull(message = "동시 수집 서버 수를 입력해주세요.")
     @Min(value = 1, message = "동시 수집 서버 수는 1 이상이어야 합니다.")
     private Integer concurrentServers;
+    
+    @NotNull(message = "방화벽정책 수집주기를 입력해주세요.")
+    @Min(value = 1, message = "방화벽정책 수집주기는 1 이상이어야 합니다.")
+    private Integer firewallPolicyCycle;
+    
+    @NotNull(message = "동시 수집 방화벽 수를 입력해주세요.")
+    @Min(value = 1, message = "동시 수집 방화벽 수는 1 이상이어야 합니다.")
+    private Integer concurrentFirewalls;
 }
