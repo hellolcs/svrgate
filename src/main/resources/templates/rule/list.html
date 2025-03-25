@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{/layout/layout}">
+<head>
+    <title>정책관리</title>
+    <link rel="stylesheet" th:href="@{/css/table.css}">
+    <!-- Select2 CSS -->
+    <link rel="stylesheet" th:href="@{/css/select2.min.css}" />
+    <link rel="stylesheet" th:href="@{/css/select2-bootstrap-5-theme.min.css}" />
+    <th:block th:replace="~{layout/table-controls :: table-styles}"></th:block>
+    <style>
+        /* 모달 내부 폼 그룹 스타일 */
+        .modal .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        /* 모달 헤더 배경색 */
+        .modal-header {
+            background-color: #0b2e5d;
+            color: white;
+        }
+        
+        /* 서버 패널 헤더 스타일 */
+        .server-panel {
+            margin-bottom: 1rem;
+            border: 1px solid #002555;
+        }
+        
+        .server-panel .card-header {
+            background-color: #002555;
+            color: white;
+            cursor: pointer;
+            padding: 0.75rem;
+        }
+        
+        /* 정책 테이블 스타일 */
+        .policy-table-container {
+            display: none;
+            margin-top: 0.5rem;
+        }
+        
+        /* 펼쳐진 상태의 패널 */
+        .expanded .policy-table-container {
+            display: block;
+        }
+        
+        /* 테이블 내 작은 아이콘 */
+        .icon-sm {
+            font-size: 0.875rem;
+        }
+        
+        /* 출발지 선택 모달 */
+        .source-search-container {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+        
+        .source-search-container input {
+            flex-grow: 1;
+            margin-right: 0.5rem;
+        }
+        
+        .source-search-results {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="container-fluid mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>정책관리</h2>
+            <button type="button" class="btn btn-primary" onclick="showAddPolicyModal()">
+                <i class="bi bi-plus-circle me-1"></i> 정책 추가
+            </button>
+        </div>
+        
+        <!-- 알림 메시지 출력 -->
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${successMessage}">성공 메시지</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${errorMessage}">오류 메시지</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        
+        <!-- 서버별 정책 패널 -->
+        <div id="server-panels-container">
+            <div th:each="server : ${serverPolicySummaries}" th:data-server-id="${server.serverId}" class="card server-panel mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center" 
+                     onclick="toggleServerPanel(this)">
+                    <div>
+                        <i class="bi bi-chevron-right me-2 toggle-icon"></i>
+                        <span th:text="${server.serverName}">서버명</span>
+                    </div>
+                    <div>
+                        <span class="badge bg-primary" th:text="${server.policyCount} + '개'">0개</span>
+                    </div>
+                </div>
+                <div class="policy-table-container">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table-custom policy-table" th:id="'policy-table-' + ${server.serverId}">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">Priority</th>
+                                        <th style="width: 200px;">출발지</th>
+                                        <th style="width: 80px;">Protocol</th>
+                                        <th style="width: 100px;">Port Mode</th>
+                                        <th style="width: 80px;">포트</th>
+                                        <th style="width: 80px;">동작</th>
+                                        <th style="width: 100px;">시간제한(h)</th>
+                                        <th style="width: 80px;">로깅</th>
+                                        <th style="width: 120px;">등록일</th>
+                                        <th style="width: 120px;">요청자</th>
+                                        <th style="width: 120px;">등록자</th>
+                                        <th style="width: 200px;">설명</th>
+                                        <th style="width: 120px;">작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="13" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <div>패널을 펼치면 정책이 로드됩니다.</div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 서버가 없는 경우 -->
+            <div th:if="${#lists.isEmpty(serverPolicySummaries)}" class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i> 등록된 연동서버 객체가 없습니다. 먼저 연동서버 객체를 등록해주세요.
+            </div>
+        </div>
+    </div>
+    
+    <!-- 출발지 검색 모달 -->
+    <div class="modal fade" id="sourceSearchModal" tabindex="-1" aria-labelledby="sourceSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sourceSearchModalLabel">출발지 객체 검색</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="source-search-container">
+                        <input type="text" id="sourceSearchInput" class="form-control" placeholder="검색어를 입력하세요">
+                        <button type="button" class="btn btn-primary" onclick="searchSourceObjects()">검색</button>
+                    </div>
+                    <div class="source-search-results">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>유형</th>
+                                    <th>이름</th>
+                                    <th>IP 주소</th>
+                                    <th>Zone</th>
+                                    <th>선택</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sourceSearchResults">
+                                <tr>
+                                    <td colspan="5" class="text-center">검색어를 입력하고 검색 버튼을 클릭하세요.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 정책 추가 모달 -->
+    <div class="modal fade" id="addPolicyModal" tabindex="-1" aria-labelledby="addPolicyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addPolicyModalLabel">정책 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addPolicyForm" th:action="@{/rule/add}" method="post">
+                        <!-- 서버 선택 -->
+                        <div class="form-group row mb-3">
+                            <label for="serverObjectId" class="col-sm-3 col-form-label">서버</label>
+                            <div class="col-sm-9">
+                                <select class="form-control select2" id="serverObjectId" name="serverObjectId" required>
+                                    <option value="">선택하세요</option>
+                                    <option th:each="server : ${serverPolicySummaries}" 
+                                            th:value="${server.serverId}" 
+                                            th:text="${server.serverName}"></option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Priority(우선순위) -->
+                        <div class="form-group row mb-3">
+                            <label for="priority" class="col-sm-3 col-form-label">우선순위</label>
+                            <div class="col-sm-9">
+                                <input type="number" class="form-control" id="priority" name="priority" min="1" required>
+                            </div>
+                        </div>
+                        
+                        <!-- 출발지 객체 -->
+                        <div class="form-group row mb-3">
+                            <label for="sourceObjectName" class="col-sm-3 col-form-label">출발지</label>
+                            <div class="col-sm-9">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="sourceObjectName" readonly required>
+                                    <input type="hidden" id="sourceObjectId" name="sourceObjectId">
+                                    <input type="hidden" id="sourceObjectType" name="sourceObjectType">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="openSourceSearchModal('add')">
+                                        출발지 찾기
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Protocol -->
+                        <div class="form-group row mb-3">
+                            <label for="protocol" class="col-sm-3 col-form-label">프로토콜</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="protocol" name="protocol" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="tcp">TCP</option>
+                                    <option value="udp">UDP</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Port Mode -->
+                        <div class="form-group row mb-3">
+                            <label for="portMode" class="col-sm-3 col-form-label">포트 모드</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="portMode" name="portMode" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="single">Single</option>
+                                    <option value="multi">Multi</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Port -->
+                        <div class="form-group row mb-3">
+                            <label for="port" class="col-sm-3 col-form-label">포트</label>
+                            <div class="col-sm-9">
+                                <input type="number" class="form-control" id="port" name="port" min="1" max="65535" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Action -->
+                        <div class="form-group row mb-3">
+                            <label for="action" class="col-sm-3 col-form-label">동작</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="action" name="action" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="accept">Accept</option>
+                                    <option value="reject">Reject</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Time Limit -->
+                        <div class="form-group row mb-3">
+                            <label for="timeLimit" class="col-sm-3 col-form-label">시간제한(h)</label>
+                            <div class="col-sm-9">
+                                <input type="number" class="form-control" id="timeLimit" name="timeLimit" min="0">
+                            </div>
+                        </div>
+                        
+                        <!-- Logging -->
+                        <div class="form-group row mb-3">
+                            <label for="logging" class="col-sm-3 col-form-label">로깅</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="logging" name="logging" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="true">사용</option>
+                                    <option value="false">미사용</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Requester -->
+                        <div class="form-group row mb-3">
+                            <label for="requester" class="col-sm-3 col-form-label">요청자</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="requester" name="requester" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="form-group row mb-3">
+                            <label for="description" class="col-sm-3 col-form-label">설명</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" form="addPolicyForm" class="btn btn-primary">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 정책 수정 모달 -->
+    <div class="modal fade" id="editPolicyModal" tabindex="-1" aria-labelledby="editPolicyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editPolicyModalLabel">정책 수정</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editPolicyForm" th:action="@{/rule/update}" method="post">
+                        <input type="hidden" id="edit-id" name="id">
+                        
+                        <!-- 서버 선택 (수정 불가) -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-serverObjectId" class="col-sm-3 col-form-label">서버</label>
+                            <div class="col-sm-9">
+                                <select class="form-control select2" id="edit-serverObjectId" name="serverObjectId" required readonly disabled>
+                                    <option value="">선택하세요</option>
+                                    <option th:each="server : ${serverPolicySummaries}" 
+                                            th:value="${server.serverId}" 
+                                            th:text="${server.serverName}"></option>
+                                </select>
+                                <input type="hidden" id="edit-serverObjectId-hidden" name="serverObjectId">
+                            </div>
+                        </div>
+                        
+                        <!-- Priority(우선순위) -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-priority" class="col-sm-3 col-form-label">우선순위</label>
+                            <div class="col-sm-9">
+                                <input type="number" class="form-control" id="edit-priority" name="priority" min="1" required>
+                            </div>
+                        </div>
+                        
+                        <!-- 출발지 객체 -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-sourceObjectName" class="col-sm-3 col-form-label">출발지</label>
+                            <div class="col-sm-9">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="edit-sourceObjectName" readonly required>
+                                    <input type="hidden" id="edit-sourceObjectId" name="sourceObjectId">
+                                    <input type="hidden" id="edit-sourceObjectType" name="sourceObjectType">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="openSourceSearchModal('edit')">
+                                        출발지 찾기
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Protocol -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-protocol" class="col-sm-3 col-form-label">프로토콜</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="edit-protocol" name="protocol" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="tcp">TCP</option>
+                                    <option value="udp">UDP</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Port Mode -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-portMode" class="col-sm-3 col-form-label">포트 모드</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="edit-portMode" name="portMode" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="single">Single</option>
+                                    <option value="multi">Multi</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Port -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-port" class="col-sm-3 col-form-label">포트</label>
+                            <div class="col-sm-9">
+                                <input type="number" class="form-control" id="edit-port" name="port" min="1" max="65535" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Action -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-action" class="col-sm-3 col-form-label">동작</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="edit-action" name="action" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="accept">Accept</option>
+                                    <option value="reject">Reject</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Time Limit -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-timeLimit" class="col-sm-3 col-form-label">시간제한(h)</label>
+                            <div class="col-sm-9">
+                                <input type="number" class="form-control" id="edit-timeLimit" name="timeLimit" min="0">
+                            </div>
+                        </div>
+                        
+                        <!-- Logging -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-logging" class="col-sm-3 col-form-label">로깅</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="edit-logging" name="logging" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="true">사용</option>
+                                    <option value="false">미사용</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Requester -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-requester" class="col-sm-3 col-form-label">요청자</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="edit-requester" name="requester" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-description" class="col-sm-3 col-form-label">설명</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control" id="edit-description" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" form="editPolicyForm" class="btn btn-primary">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 정책 삭제 폼 -->
+    <form id="deletePolicyForm" th:action="@{/rule/delete}" method="post" style="display: none;">
+        <input type="hidden" id="deletePolicyId" name="id">
+    </form>
+    
+    <!-- JavaScript -->
+    <script th:src="@{/js/jquery-3.6.0.min.js}"></script>
+    <script th:src="@{/js/select2.min.js}"></script>
+    <script th:src="@{/js/policy.js}"></script>
+</div>
+</body>
+</html>
