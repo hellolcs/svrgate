@@ -138,16 +138,16 @@
                             <label for="name" class="col-sm-4 col-form-label">서버명:</label>
                             <div class="col-sm-8">
                                 <input type="text" class="form-control" id="name" name="name" required
-                                       pattern="^[a-zA-Z0-9_-]+$" 
-                                       title="영문자, 숫자, 대시(-), 언더바(_)만 허용됩니다.">
+                                    pattern="^[a-zA-Z0-9_-]+$" 
+                                    title="영문자, 숫자, 대시(-), 언더바(_)만 허용됩니다.">
                             </div>
                         </div>
                         <div class="form-group row mb-3">
                             <label for="ipAddress" class="col-sm-4 col-form-label">IP 주소:</label>
                             <div class="col-sm-8">
                                 <input type="text" class="form-control" id="ipAddress" name="ipAddress" required
-                                       pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" 
-                                       title="유효한 IPv4 주소 형식이 아닙니다.">
+                                    pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" 
+                                    title="유효한 IPv4 주소 형식이 아닙니다.">
                             </div>
                         </div>
                         <div class="form-group row mb-3">
@@ -167,6 +167,15 @@
                                     <label class="form-check-label" for="active">연동</label>
                                 </div>
                                 <small class="form-text text-muted">연동 여부를 설정합니다. 비활성화 시 연동이 수행되지 않습니다.</small>
+                            </div>
+                        </div>
+                        <!-- API Key 필드 추가 -->
+                        <div class="form-group row mb-3">
+                            <label for="apiKey" class="col-sm-4 col-form-label">API Key:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="apiKey" name="apiKey" 
+                                    placeholder="API Key를 입력하세요">
+                                <small class="form-text text-muted">Agent와 통신 시 사용할 인증 키입니다. 연동 시 필요합니다.</small>
                             </div>
                         </div>
                         <div class="form-group row mb-3">
@@ -200,16 +209,16 @@
                             <label for="edit-name" class="col-sm-4 col-form-label">서버명:</label>
                             <div class="col-sm-8">
                                 <input type="text" class="form-control" id="edit-name" name="name" required
-                                       pattern="^[a-zA-Z0-9_-]+$" 
-                                       title="영문자, 숫자, 대시(-), 언더바(_)만 허용됩니다.">
+                                    pattern="^[a-zA-Z0-9_-]+$" 
+                                    title="영문자, 숫자, 대시(-), 언더바(_)만 허용됩니다.">
                             </div>
                         </div>
                         <div class="form-group row mb-3">
                             <label for="edit-ipAddress" class="col-sm-4 col-form-label">IP 주소:</label>
                             <div class="col-sm-8">
                                 <input type="text" class="form-control" id="edit-ipAddress" name="ipAddress" required
-                                       pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" 
-                                       title="유효한 IPv4 주소 형식이 아닙니다.">
+                                    pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$" 
+                                    title="유효한 IPv4 주소 형식이 아닙니다.">
                             </div>
                         </div>
                         <div class="form-group row mb-3">
@@ -229,6 +238,15 @@
                                     <label class="form-check-label" for="edit-active">연동</label>
                                 </div>
                                 <small class="form-text text-muted">연동 여부를 설정합니다. 비활성화 시 연동이 수행되지 않습니다.</small>
+                            </div>
+                        </div>
+                        <!-- API Key 필드 추가 -->
+                        <div class="form-group row mb-3">
+                            <label for="edit-apiKey" class="col-sm-4 col-form-label">API Key:</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="edit-apiKey" name="apiKey" 
+                                    placeholder="API Key를 입력하세요">
+                                <small class="form-text text-muted">Agent와 통신 시 사용할 인증 키입니다. 연동 시 필요합니다.</small>
                             </div>
                         </div>
                         <div class="form-group row mb-3">

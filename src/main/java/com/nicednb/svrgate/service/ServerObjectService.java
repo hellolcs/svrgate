@@ -35,7 +35,7 @@ public class ServerObjectService {
     private final NetworkObjectRepository networkObjectRepository;
     private final ZoneObjectRepository zoneObjectRepository;
     private final OperationLogService operationLogService;
-    
+
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
@@ -82,9 +82,7 @@ public class ServerObjectService {
         return PageConversionUtil.convertEntityPageToDtoPage(objectPage, this::convertToDto);
     }
 
-    /**
-     * ServerObjectDto를 ServerObject 엔티티로 변환
-     */
+    // convertToEntity 메서드에 apiKey 필드 처리 추가
     private ServerObject convertToEntity(ServerObjectDto dto) {
         ServerObject serverObject = new ServerObject();
 
@@ -97,6 +95,7 @@ public class ServerObjectService {
         serverObject.setActive(dto.isActive());
         serverObject.setDescription(dto.getDescription());
         serverObject.setLastSyncTime(dto.getLastSyncTime());
+        serverObject.setApiKey(dto.getApiKey()); // API Key 설정
 
         // Zone 설정
         if (dto.getZoneId() != null) {
@@ -108,9 +107,7 @@ public class ServerObjectService {
         return serverObject;
     }
 
-    /**
-     * ServerObject 엔티티를 ServerObjectDto로 변환
-     */
+    // convertToDto 메서드에 apiKey 필드 처리 추가
     public ServerObjectDto convertToDto(ServerObject serverObject) {
         ServerObjectDto dto = new ServerObjectDto();
         dto.setId(serverObject.getId());
@@ -119,7 +116,8 @@ public class ServerObjectService {
         dto.setActive(serverObject.isActive());
         dto.setDescription(serverObject.getDescription());
         dto.setLastSyncTime(serverObject.getLastSyncTime());
-        
+        dto.setApiKey(serverObject.getApiKey()); // API Key 설정
+
         if (serverObject.getLastSyncTime() != null) {
             dto.setLastSyncTimeFormatted(serverObject.getLastSyncTime().format(DATE_TIME_FORMATTER));
         } else {
@@ -139,7 +137,7 @@ public class ServerObjectService {
      * IP 중복 체크 (객체 타입에 관계없이 전체 체크)
      * 
      * @param ipAddress 체크할 IP 주소
-     * @param objectId 수정 시 자기 자신 제외를 위한 ID (새 객체 생성 시 null)
+     * @param objectId  수정 시 자기 자신 제외를 위한 ID (새 객체 생성 시 null)
      * @throws IllegalArgumentException 중복된 IP가 존재하는 경우
      */
     @Transactional(readOnly = true)
@@ -147,32 +145,37 @@ public class ServerObjectService {
         // 일반 객체 내에서 IP 중복 체크
         generalObjectRepository.findByIpAddress(ipAddress)
                 .ifPresent(obj -> {
-                    throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + ipAddress + " (일반 객체: " + obj.getName() + ")");
+                    throw new IllegalArgumentException(
+                            "이미 사용 중인 IP 주소입니다: " + ipAddress + " (일반 객체: " + obj.getName() + ")");
                 });
 
         // 네트워크 객체 내에서 IP 중복 체크
         networkObjectRepository.findByIpAddress(ipAddress)
                 .ifPresent(obj -> {
-                    throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + ipAddress + " (네트워크 객체: " + obj.getName() + ")");
+                    throw new IllegalArgumentException(
+                            "이미 사용 중인 IP 주소입니다: " + ipAddress + " (네트워크 객체: " + obj.getName() + ")");
                 });
 
         // 연동서버 객체 내에서 IP 중복 체크
         if (objectId == null) {
             serverObjectRepository.findByIpAddress(ipAddress)
                     .ifPresent(obj -> {
-                        throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + ipAddress + " (연동서버 객체: " + obj.getName() + ")");
+                        throw new IllegalArgumentException(
+                                "이미 사용 중인 IP 주소입니다: " + ipAddress + " (연동서버 객체: " + obj.getName() + ")");
                     });
         } else {
             serverObjectRepository.findByIpAddressAndIdNot(ipAddress, objectId)
                     .ifPresent(obj -> {
-                        throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + ipAddress + " (연동서버 객체: " + obj.getName() + ")");
+                        throw new IllegalArgumentException(
+                                "이미 사용 중인 IP 주소입니다: " + ipAddress + " (연동서버 객체: " + obj.getName() + ")");
                     });
         }
 
         // 방화벽 IP와의 중복 체크 (Zone의 firewallIp와 중복되지 않도록)
         zoneObjectRepository.findByFirewallIp(ipAddress)
                 .ifPresent(obj -> {
-                    throw new IllegalArgumentException("이미 사용 중인 IP 주소입니다: " + ipAddress + " (Zone 방화벽IP: " + obj.getName() + ")");
+                    throw new IllegalArgumentException(
+                            "이미 사용 중인 IP 주소입니다: " + ipAddress + " (Zone 방화벽IP: " + obj.getName() + ")");
                 });
     }
 
@@ -276,31 +279,31 @@ public class ServerObjectService {
 
         log.info("연동서버 객체 삭제 완료: {}", serverObject.getName());
     }
-    
+
     /**
      * 서버와 연동(동기화) 수행
      * 
-     * @param id 연동할 서버 객체 ID
+     * @param id       연동할 서버 객체 ID
      * @param clientIp 클라이언트 IP 주소
      * @return 연동된 서버 객체 DTO
      */
     @Transactional
     public ServerObjectDto syncWithServer(Long id, String clientIp) {
         log.info("서버 연동 시작: ID={}", id);
-        
+
         // 연동서버 객체 존재 여부 확인
         ServerObject serverObject = findById(id);
-        
+
         // 연동 여부 확인
         if (!serverObject.isActive()) {
             throw new IllegalStateException("연동이 비활성화된 서버입니다: " + serverObject.getName());
         }
-        
+
         try {
             // TODO: 실제 서버와의 연동 로직 구현 (현재는 마지막 연동 시각만 업데이트)
             serverObject.setLastSyncTime(LocalDateTime.now());
             ServerObject updatedServerObject = serverObjectRepository.save(serverObject);
-            
+
             // 로그 기록
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
             operationLogService.logOperation(
@@ -310,13 +313,13 @@ public class ServerObjectService {
                     "연동서버 객체명: " + updatedServerObject.getName(),
                     "객체관리",
                     "서버 연동 수행");
-            
+
             log.info("서버 연동 완료: {}", updatedServerObject.getName());
             return convertToDto(updatedServerObject);
-            
+
         } catch (Exception e) {
             log.error("서버 연동 실패: {}", e.getMessage(), e);
-            
+
             // 로그 기록 (실패)
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
             operationLogService.logOperation(
@@ -326,7 +329,7 @@ public class ServerObjectService {
                     "실패 사유: " + e.getMessage(),
                     "객체관리",
                     "서버 연동 실패");
-            
+
             throw new RuntimeException("서버 연동 중 오류가 발생했습니다: " + e.getMessage(), e);
         }
     }

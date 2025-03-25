@@ -24,6 +24,9 @@ public class ServerObject {
 
     @Column(nullable = false)
     private boolean active = true; // 연동여부
+    
+    @Column(length = 255)
+    private String apiKey; // API Key - 연동서버 Agent와 통신 시 인증에 사용
 
     @Column(length = 255, columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String description; // 설명

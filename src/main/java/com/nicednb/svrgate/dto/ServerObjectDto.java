@@ -24,6 +24,8 @@ public class ServerObjectDto {
     private String ipAddress;
 
     private boolean active; // 연동여부
+    
+    private String apiKey; // API Key
 
     private String description;
 

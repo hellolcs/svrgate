@@ -41,6 +41,7 @@ function editServerObject(id) {
             $('#edit-ipAddress').val(response.ipAddress);
             $('#edit-active').prop('checked', response.active);
             $('#edit-description').val(response.description);
+            $('#edit-apiKey').val(response.apiKey); // API Key 값 설정
             
             // Zone 선택
             $('#edit-zoneId').val(response.zoneId).trigger('change');
