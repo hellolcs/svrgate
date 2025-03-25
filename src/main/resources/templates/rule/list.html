@@ -65,6 +65,15 @@
             max-height: 300px;
             overflow-y: auto;
         }
+        
+        /* 출발지 검색 모달이 다른 모달 위에 표시되도록 z-index 조정 */
+        #sourceSearchModal {
+            z-index: 1060 !important; /* 기본 모달 z-index보다 높게 설정 */
+        }
+        
+        #sourceSearchModal .modal-backdrop {
+            z-index: 1059 !important;
+        }
     </style>
 </head>
 <body>

@@ -48,10 +48,10 @@ public class Policy {
     @Column(nullable = false)
     private LocalDateTime registrationDate; // 등록일
 
-    @Column(length = 100)
+    @Column(length = 32, columnDefinition = "VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String requester; // 요청자
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 32, columnDefinition = "VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String registrar; // 등록자 (계정 Name)
 
     @Column(length = 255, columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")

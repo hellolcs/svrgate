@@ -49,7 +49,7 @@ public class PolicyController {
      */
     @GetMapping("/server/{serverId}")
     @ResponseBody
-    public List<PolicyDto> getPoliciesByServerId(@PathVariable Long serverId) {
+    public List<PolicyDto> getPoliciesByServerId(@PathVariable("serverId") Long serverId) {
         log.info("서버별 정책 목록 조회: serverId={}", serverId);
         return policyService.getPoliciesByServerId(serverId);
     }
@@ -59,7 +59,7 @@ public class PolicyController {
      */
     @GetMapping("/{id}")
     @ResponseBody
-    public PolicyDto getPolicyById(@PathVariable Long id) {
+    public PolicyDto getPolicyById(@PathVariable("id") Long id) {
         log.info("정책 상세 조회: id={}", id);
         return policyService.getPolicyById(id);
     }
@@ -69,7 +69,7 @@ public class PolicyController {
      */
     @GetMapping("/source-objects")
     @ResponseBody
-    public List<SourceObjectDto> searchSourceObjects(@RequestParam(required = false) String searchText) {
+    public List<SourceObjectDto> searchSourceObjects(@RequestParam(value = "searchText", required = false) String searchText) {
         log.info("출발지 객체 검색: searchText={}", searchText);
         return policyService.searchSourceObjects(searchText);
     }

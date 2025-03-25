@@ -24,7 +24,16 @@ function initializeSelect2() {
         theme: 'bootstrap-5',
         width: '100%',
         placeholder: '선택하세요',
-        allowClear: true
+        allowClear: true,
+        minimumResultsForSearch: 0, // 항목 수에 상관없이 검색 활성화
+        language: {
+            searching: function() {
+                return "검색 중...";
+            },
+            noResults: function() {
+                return "검색 결과가 없습니다";
+            }
+        }
     });
 }
 
@@ -207,8 +216,19 @@ function openSourceSearchModal(mode) {
     document.getElementById('sourceSearchInput').value = '';
     document.getElementById('sourceSearchResults').innerHTML = '<tr><td colspan="5" class="text-center">검색어를 입력하고 검색 버튼을 클릭하세요.</td></tr>';
     
-    // 모달 표시
+    // 현재 활성화된 모달의 backdrop 숨기기
+    $('.modal-backdrop').addClass('d-none');
+    
+    // 출발지 검색 모달 표시
     $('#sourceSearchModal').modal('show');
+    
+    // 출발지 검색 모달이 닫힐 때 이벤트
+    $('#sourceSearchModal').on('hidden.bs.modal', function() {
+        // backdrop 복원
+        $('.modal-backdrop').removeClass('d-none');
+        // 이벤트 리스너 제거
+        $(this).off('hidden.bs.modal');
+    });
 }
 
 /**
