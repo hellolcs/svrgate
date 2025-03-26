@@ -16,10 +16,6 @@ $(document).ready(function() {
     $('#edit-portMode').on('change', function() {
         updatePortInputs('edit-');
     });
-    
-    // 페이지 로드 시 초기화
-    updatePortInputs('');
-    updatePortInputs('edit-');
 });
 
 /**
@@ -39,7 +35,6 @@ function updatePortInputs(prefix) {
     }
 }
 
-// 나머지 함수들은 그대로 유지...
 /**
  * 서버 패널 토글
  * @param {HTMLElement} header - 패널 헤더 요소
@@ -101,7 +96,7 @@ function loadPolicies(serverId) {
                                 <td>${policy.timeLimit || '-'}</td>
                                 <td>${policy.logging ? '사용' : '미사용'}</td>
                                 <td>${policy.registrationDateFormatted}</td>
-                                <td>${policy.requester}</td>
+                                <td>${policy.requester || '-'}</td>
                                 <td>${policy.registrar}</td>
                                 <td>${policy.description || '-'}</td>
                                 <td>
@@ -140,7 +135,7 @@ function showAddPolicyModal() {
     $('#serverObjectId').val('').trigger('change');
     
     // 포트 입력 필드 초기화
-    updatePortInputs('add');
+    updatePortInputs('');
     
     // 모달 표시
     $('#addPolicyModal').modal('show');
@@ -269,8 +264,8 @@ function editPolicy(id) {
             $('#edit-serverObjectId').val(policy.serverObjectId).trigger('change');
             $('#edit-serverObjectId-hidden').val(policy.serverObjectId);
             
-            // 포트 입력 필드 업데이트
-            updatePortInputs('edit');
+            // 포트 모드에 따라 UI 업데이트
+            updatePortInputs('edit-');
             
             // 모달 표시
             $('#editPolicyModal').modal('show');
@@ -300,6 +295,26 @@ function validateAndSubmit(formId) {
     const form = document.getElementById(formId);
     const prefix = formId === 'editPolicyForm' ? 'edit-' : '';
     
+    // 필수 필드 검증
+    const requiredFields = [
+        { id: `${prefix}priority`, name: '우선순위' },
+        { id: `${prefix}sourceObjectName`, name: '출발지' },
+        { id: `${prefix}protocol`, name: '프로토콜' },
+        { id: `${prefix}portMode`, name: '포트 모드' },
+        { id: `${prefix}startPort`, name: '시작 포트' },
+        { id: `${prefix}action`, name: '동작' },
+        { id: `${prefix}logging`, name: '로깅' }
+    ];
+    
+    for (let field of requiredFields) {
+        const element = document.getElementById(field.id);
+        if (!element.value) {
+            alert(`${field.name} 값을 입력해주세요.`);
+            element.focus();
+            return false;
+        }
+    }
+    
     // 포트 모드 확인
     const portMode = $(`#${prefix}portMode`).val();
     
@@ -308,8 +323,15 @@ function validateAndSubmit(formId) {
         const startPort = parseInt($(`#${prefix}startPort`).val());
         const endPort = parseInt($(`#${prefix}endPort`).val());
         
+        if (!$(`#${prefix}endPort`).val()) {
+            alert('종료 포트를 입력해주세요.');
+            $(`#${prefix}endPort`).focus();
+            return false;
+        }
+        
         if (endPort <= startPort) {
             alert('종료 포트는 시작 포트보다 커야 합니다.');
+            $(`#${prefix}endPort`).focus();
             return false;
         }
     }
