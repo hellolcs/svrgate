@@ -74,6 +74,22 @@
         #sourceSearchModal .modal-backdrop {
             z-index: 1059 !important;
         }
+        
+        /* 포트 범위 입력 스타일 */
+        .port-range-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        .port-range-container input {
+            width: calc(50% - 10px);
+        }
+        
+        .port-range-separator {
+            width: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -120,7 +136,7 @@
                                         <th style="width: 200px;">출발지</th>
                                         <th style="width: 80px;">Protocol</th>
                                         <th style="width: 100px;">Port Mode</th>
-                                        <th style="width: 80px;">포트</th>
+                                        <th style="width: 120px;">포트</th>
                                         <th style="width: 80px;">동작</th>
                                         <th style="width: 100px;">시간제한(h)</th>
                                         <th style="width: 80px;">로깅</th>
@@ -255,7 +271,7 @@
                         <div class="form-group row mb-3">
                             <label for="portMode" class="col-sm-3 col-form-label">포트 모드</label>
                             <div class="col-sm-9">
-                                <select class="form-control" id="portMode" name="portMode" required>
+                                <select class="form-control" id="portMode" name="portMode" required onchange="updatePortInputs('add')">
                                     <option value="">선택하세요</option>
                                     <option value="single">Single</option>
                                     <option value="multi">Multi</option>
@@ -263,11 +279,15 @@
                             </div>
                         </div>
                         
-                        <!-- Port -->
+                        <!-- Port Range -->
                         <div class="form-group row mb-3">
-                            <label for="port" class="col-sm-3 col-form-label">포트</label>
+                            <label for="startPort" class="col-sm-3 col-form-label">포트</label>
                             <div class="col-sm-9">
-                                <input type="number" class="form-control" id="port" name="port" min="1" max="65535" required>
+                                <div class="port-range-container">
+                                    <input type="number" class="form-control" id="startPort" name="startPort" min="1" max="65535" required>
+                                    <div class="port-range-separator">-</div>
+                                    <input type="number" class="form-control" id="endPort" name="endPort" min="1" max="65535" disabled>
+                                </div>
                             </div>
                         </div>
                         
@@ -322,7 +342,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                    <button type="submit" form="addPolicyForm" class="btn btn-primary">저장</button>
+                    <button type="button" class="btn btn-primary" onclick="validateAndSubmit('addPolicyForm')">저장</button>
                 </div>
             </div>
         </div>
@@ -393,7 +413,7 @@
                         <div class="form-group row mb-3">
                             <label for="edit-portMode" class="col-sm-3 col-form-label">포트 모드</label>
                             <div class="col-sm-9">
-                                <select class="form-control" id="edit-portMode" name="portMode" required>
+                                <select class="form-control" id="edit-portMode" name="portMode" required onchange="updatePortInputs('edit')">
                                     <option value="">선택하세요</option>
                                     <option value="single">Single</option>
                                     <option value="multi">Multi</option>
@@ -401,11 +421,15 @@
                             </div>
                         </div>
                         
-                        <!-- Port -->
+                        <!-- Port Range -->
                         <div class="form-group row mb-3">
-                            <label for="edit-port" class="col-sm-3 col-form-label">포트</label>
+                            <label for="edit-startPort" class="col-sm-3 col-form-label">포트</label>
                             <div class="col-sm-9">
-                                <input type="number" class="form-control" id="edit-port" name="port" min="1" max="65535" required>
+                                <div class="port-range-container">
+                                    <input type="number" class="form-control" id="edit-startPort" name="startPort" min="1" max="65535" required>
+                                    <div class="port-range-separator">-</div>
+                                    <input type="number" class="form-control" id="edit-endPort" name="endPort" min="1" max="65535">
+                                </div>
                             </div>
                         </div>
                         
@@ -460,7 +484,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                    <button type="submit" form="editPolicyForm" class="btn btn-primary">저장</button>
+                    <button type="button" class="btn btn-primary" onclick="validateAndSubmit('editPolicyForm')">저장</button>
                 </div>
             </div>
         </div>

@@ -30,10 +30,14 @@ public class PolicyDto {
     @NotEmpty(message = "포트 모드를 선택해주세요.")
     private String portMode; // 포트 모드 (single, multi)
 
-    @NotNull(message = "포트를 입력해주세요.")
+    @NotNull(message = "시작 포트를 입력해주세요.")
     @Min(value = 1, message = "포트는 1 이상이어야 합니다.")
     @Max(value = 65535, message = "포트는 65535 이하여야 합니다.")
-    private Integer port; // 포트
+    private Integer startPort; // 시작 포트
+    
+    @Min(value = 1, message = "포트는 1 이상이어야 합니다.")
+    @Max(value = 65535, message = "포트는 65535 이하여야 합니다.")
+    private Integer endPort; // 끝 포트 (portMode가 multi인 경우에만 필요)
 
     @NotEmpty(message = "동작을 선택해주세요.")
     private String action; // 동작 (accept, reject)

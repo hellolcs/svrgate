@@ -1,358 +1,319 @@
-// policy.js - 정책관리 관련 자바스크립트
-
-// 현재 편집/선택 중인 모달 모드 (add 또는 edit)
-let currentModalMode = 'add';
-
-// DOM이 완전히 로드된 후 실행
-document.addEventListener('DOMContentLoaded', function() {
-    initializePolicyPage();
-});
-
-/**
- * 정책관리 페이지 초기화
- */
-function initializePolicyPage() {
+// 정책관리 JS
+$(document).ready(function() {
     // Select2 초기화
-    initializeSelect2();
-}
-
-/**
- * Select2 초기화
- */
-function initializeSelect2() {
     $('.select2').select2({
         theme: 'bootstrap-5',
         width: '100%',
         placeholder: '선택하세요',
-        allowClear: true,
-        minimumResultsForSearch: 0, // 항목 수에 상관없이 검색 활성화
-        language: {
-            searching: function() {
-                return "검색 중...";
-            },
-            noResults: function() {
-                return "검색 결과가 없습니다";
-            }
-        }
+        allowClear: true
     });
-}
+    
+    // 포트 모드 변경 이벤트 리스너 추가
+    $('#portMode').on('change', function() {
+        updatePortInputs('');
+    });
+    
+    $('#edit-portMode').on('change', function() {
+        updatePortInputs('edit-');
+    });
+    
+    // 페이지 로드 시 초기화
+    updatePortInputs('');
+    updatePortInputs('edit-');
+});
 
 /**
- * 서버 패널 접기/펼치기
- * @param {HTMLElement} element 클릭된 패널 헤더 요소
+ * 포트 입력 필드 업데이트
+ * @param {string} prefix - '' 또는 'edit-' 접두사
  */
-function toggleServerPanel(element) {
-    const panel = element.closest('.server-panel');
-    const serverId = panel.getAttribute('data-server-id');
-    const isExpanded = panel.classList.contains('expanded');
-    const toggleIcon = panel.querySelector('.toggle-icon');
+function updatePortInputs(prefix) {
+    const portMode = $(`#${prefix}portMode`).val();
+    const endPortField = $(`#${prefix}endPort`);
     
-    if (isExpanded) {
-        // 패널 접기
-        panel.classList.remove('expanded');
-        toggleIcon.classList.remove('bi-chevron-down');
-        toggleIcon.classList.add('bi-chevron-right');
+    if (portMode === 'multi') {
+        // Multi 모드: 두 번째 입력 필드 활성화
+        endPortField.prop('disabled', false).prop('required', true);
     } else {
-        // 패널 펼치기
-        panel.classList.add('expanded');
-        toggleIcon.classList.remove('bi-chevron-right');
-        toggleIcon.classList.add('bi-chevron-down');
+        // Single 모드: 두 번째 입력 필드 비활성화하고 값 지우기
+        endPortField.prop('disabled', true).prop('required', false).val('');
+    }
+}
+
+// 나머지 함수들은 그대로 유지...
+/**
+ * 서버 패널 토글
+ * @param {HTMLElement} header - 패널 헤더 요소
+ */
+function toggleServerPanel(header) {
+    const panel = $(header).closest('.server-panel');
+    panel.toggleClass('expanded');
+    
+    // 토글 아이콘 변경
+    const icon = $(header).find('.toggle-icon');
+    if (panel.hasClass('expanded')) {
+        icon.removeClass('bi-chevron-right').addClass('bi-chevron-down');
         
-        // 정책 데이터 로드 (이미 로드되지 않은 경우)
-        const tableBody = panel.querySelector(`#policy-table-${serverId} tbody`);
-        if (tableBody.innerHTML.includes('Loading')) {
-            loadPoliciesByServerId(serverId);
-        }
+        // 패널 확장 시 정책 로드
+        const serverId = panel.data('server-id');
+        loadPolicies(serverId);
+    } else {
+        icon.removeClass('bi-chevron-down').addClass('bi-chevron-right');
     }
 }
 
 /**
- * 서버별 정책 목록 로드
- * @param {string} serverId 서버 ID
+ * 정책 목록 로드
+ * @param {number} serverId - 서버 ID
  */
-function loadPoliciesByServerId(serverId) {
-    $.ajax({
-        url: `/rule/server/${serverId}`,
-        type: 'GET',
-        success: function(policies) {
-            renderPolicyTable(serverId, policies);
-        },
-        error: function(xhr, status, error) {
-            const tableBody = document.querySelector(`#policy-table-${serverId} tbody`);
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="13" class="text-center text-danger">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        정책 목록을 불러오는 중 오류가 발생했습니다: ${error}
-                    </td>
-                </tr>
-            `;
-        }
-    });
-}
-
-/**
- * 정책 테이블 렌더링
- * @param {string} serverId 서버 ID
- * @param {Array} policies 정책 목록
- */
-function renderPolicyTable(serverId, policies) {
-    const tableBody = document.querySelector(`#policy-table-${serverId} tbody`);
-    let html = '';
+function loadPolicies(serverId) {
+    const tableBody = $(`#policy-table-${serverId} tbody`);
     
-    if (policies.length === 0) {
-        html = `
-            <tr>
-                <td colspan="13" class="text-center">
-                    <i class="bi bi-info-circle me-2"></i>
-                    이 서버에 등록된 정책이 없습니다.
-                </td>
-            </tr>
-        `;
-    } else {
-        policies.forEach(policy => {
-            html += `
-                <tr data-policy-id="${policy.id}">
-                    <td>${policy.priority}</td>
-                    <td>${policy.sourceObjectName}</td>
-                    <td>${policy.protocol.toUpperCase()}</td>
-                    <td>${capitalizeFirstLetter(policy.portMode)}</td>
-                    <td>${policy.port}</td>
-                    <td>${capitalizeFirstLetter(policy.action)}</td>
-                    <td>${policy.timeLimit !== null ? policy.timeLimit : '-'}</td>
-                    <td>${policy.logging ? '사용' : '미사용'}</td>
-                    <td>${policy.registrationDateFormatted}</td>
-                    <td>${policy.requester}</td>
-                    <td>${policy.registrar}</td>
-                    <td>${policy.description || '-'}</td>
-                    <td>
-                        <button type="button" class="btn btn-outline-primary btn-sm btn-action" 
-                                onclick="editPolicy(${policy.id})">수정</button>
-                        <button type="button" class="btn btn-outline-danger btn-sm btn-action" 
-                                onclick="deletePolicy(${policy.id})">삭제</button>
-                    </td>
-                </tr>
-            `;
+    // 이미 로드된 경우 중복 로드 방지
+    if (tableBody.find('tr:first').find('td').length < 13) {
+        $.ajax({
+            url: `/rule/server/${serverId}`,
+            type: 'GET',
+            success: function(policies) {
+                tableBody.empty();
+                
+                if (policies.length === 0) {
+                    tableBody.append(`
+                        <tr>
+                            <td colspan="13" class="text-center">등록된 정책이 없습니다.</td>
+                        </tr>
+                    `);
+                } else {
+                    policies.forEach(policy => {
+                        // 포트 표시 방식 변경
+                        let portDisplay = policy.startPort;
+                        if (policy.portMode === 'multi' && policy.endPort) {
+                            portDisplay = `${policy.startPort} - ${policy.endPort}`;
+                        }
+                        
+                        tableBody.append(`
+                            <tr>
+                                <td>${policy.priority}</td>
+                                <td>${policy.sourceObjectName}</td>
+                                <td>${policy.protocol.toUpperCase()}</td>
+                                <td>${policy.portMode === 'single' ? 'Single' : 'Multi'}</td>
+                                <td>${portDisplay}</td>
+                                <td>${policy.action === 'accept' ? 'Accept' : 'Reject'}</td>
+                                <td>${policy.timeLimit || '-'}</td>
+                                <td>${policy.logging ? '사용' : '미사용'}</td>
+                                <td>${policy.registrationDateFormatted}</td>
+                                <td>${policy.requester}</td>
+                                <td>${policy.registrar}</td>
+                                <td>${policy.description || '-'}</td>
+                                <td>
+                                    <button type="button" class="btn btn-outline-primary btn-action" onclick="editPolicy(${policy.id})">수정</button>
+                                    <button type="button" class="btn btn-outline-danger btn-action" onclick="deletePolicy(${policy.id})">삭제</button>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                tableBody.html(`
+                    <tr>
+                        <td colspan="13" class="text-center text-danger">
+                            정책 목록을 불러오는 중 오류가 발생했습니다: ${error}
+                        </td>
+                    </tr>
+                `);
+            }
         });
     }
-    
-    tableBody.innerHTML = html;
 }
 
 /**
- * 정책 추가 모달 보기
+ * 정책 추가 모달 표시
  */
 function showAddPolicyModal() {
     // 폼 초기화
-    document.getElementById('addPolicyForm').reset();
-    document.getElementById('sourceObjectName').value = '';
-    document.getElementById('sourceObjectId').value = '';
-    document.getElementById('sourceObjectType').value = '';
+    $('#addPolicyForm')[0].reset();
+    $('#sourceObjectId').val('');
+    $('#sourceObjectType').val('');
+    $('#sourceObjectName').val('');
     
     // Select2 초기화
-    $('#serverObjectId').val(null).trigger('change');
+    $('#serverObjectId').val('').trigger('change');
+    
+    // 포트 입력 필드 초기화
+    updatePortInputs('add');
     
     // 모달 표시
     $('#addPolicyModal').modal('show');
 }
 
 /**
- * 정책 수정
- * @param {number} policyId 정책 ID
+ * 출발지 객체 검색 모달 열기
+ * @param {string} targetForm - 'add' 또는 'edit'
  */
-function editPolicy(policyId) {
-    // 정책 정보 가져오기
-    $.ajax({
-        url: `/rule/${policyId}`,
-        type: 'GET',
-        success: function(policy) {
-            // 폼에 데이터 설정
-            document.getElementById('edit-id').value = policy.id;
-            document.getElementById('edit-serverObjectId-hidden').value = policy.serverObjectId;
-            document.getElementById('edit-priority').value = policy.priority;
-            document.getElementById('edit-sourceObjectId').value = policy.sourceObjectId;
-            document.getElementById('edit-sourceObjectType').value = policy.sourceObjectType;
-            document.getElementById('edit-sourceObjectName').value = policy.sourceObjectName;
-            document.getElementById('edit-protocol').value = policy.protocol;
-            document.getElementById('edit-portMode').value = policy.portMode;
-            document.getElementById('edit-port').value = policy.port;
-            document.getElementById('edit-action').value = policy.action;
-            document.getElementById('edit-timeLimit').value = policy.timeLimit !== null ? policy.timeLimit : '';
-            document.getElementById('edit-logging').value = policy.logging.toString();
-            document.getElementById('edit-requester').value = policy.requester;
-            document.getElementById('edit-description').value = policy.description || '';
-            
-            // Select2 초기화
-            $('#edit-serverObjectId').val(policy.serverObjectId).trigger('change');
-            
-            // 모달 표시
-            $('#editPolicyModal').modal('show');
-        },
-        error: function(xhr, status, error) {
-            alert(`정책 정보를 가져오는 중 오류가 발생했습니다: ${error}`);
-        }
-    });
-}
-
-/**
- * 정책 삭제
- * @param {number} policyId 정책 ID
- */
-function deletePolicy(policyId) {
-    if (confirm('정말 이 정책을 삭제하시겠습니까?')) {
-        document.getElementById('deletePolicyId').value = policyId;
-        document.getElementById('deletePolicyForm').submit();
-    }
-}
-
-/**
- * 출발지 검색 모달 열기
- * @param {string} mode 모달 모드 ('add' 또는 'edit')
- */
-function openSourceSearchModal(mode) {
-    currentModalMode = mode;
+function openSourceSearchModal(targetForm) {
+    // 전역 변수에 타겟 폼 저장
+    window.currentSourceTarget = targetForm;
     
-    // 검색 결과 초기화
-    document.getElementById('sourceSearchInput').value = '';
-    document.getElementById('sourceSearchResults').innerHTML = '<tr><td colspan="5" class="text-center">검색어를 입력하고 검색 버튼을 클릭하세요.</td></tr>';
+    // 검색 입력 필드 초기화
+    $('#sourceSearchInput').val('');
+    $('#sourceSearchResults').html('<tr><td colspan="5" class="text-center">검색어를 입력하고 검색 버튼을 클릭하세요.</td></tr>');
     
-    // 현재 활성화된 모달의 backdrop 숨기기
-    $('.modal-backdrop').addClass('d-none');
-    
-    // 출발지 검색 모달 표시
+    // 모달 표시
     $('#sourceSearchModal').modal('show');
-    
-    // 출발지 검색 모달이 닫힐 때 이벤트
-    $('#sourceSearchModal').on('hidden.bs.modal', function() {
-        // backdrop 복원
-        $('.modal-backdrop').removeClass('d-none');
-        // 이벤트 리스너 제거
-        $(this).off('hidden.bs.modal');
-    });
 }
 
 /**
  * 출발지 객체 검색
  */
 function searchSourceObjects() {
-    const searchText = document.getElementById('sourceSearchInput').value;
-    const resultsContainer = document.getElementById('sourceSearchResults');
+    const searchText = $('#sourceSearchInput').val();
+    const resultsContainer = $('#sourceSearchResults');
     
     // 로딩 표시
-    resultsContainer.innerHTML = `
-        <tr>
-            <td colspan="5" class="text-center">
-                <div class="spinner-border spinner-border-sm text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <span class="ms-2">검색 중...</span>
-            </td>
-        </tr>
-    `;
+    resultsContainer.html('<tr><td colspan="5" class="text-center"><div class="spinner-border spinner-border-sm"></div> 검색 중...</td></tr>');
     
-    // 출발지 객체 검색 API 호출
     $.ajax({
         url: '/rule/source-objects',
         type: 'GET',
         data: { searchText: searchText },
         success: function(objects) {
-            renderSourceObjects(objects);
+            resultsContainer.empty();
+            
+            if (objects.length === 0) {
+                resultsContainer.html('<tr><td colspan="5" class="text-center">검색 결과가 없습니다.</td></tr>');
+            } else {
+                objects.forEach(obj => {
+                    let typeLabel;
+                    switch (obj.type) {
+                        case 'SERVER':
+                            typeLabel = '연동서버';
+                            break;
+                        case 'GENERAL':
+                            typeLabel = '일반객체';
+                            break;
+                        case 'NETWORK':
+                            typeLabel = '네트워크';
+                            break;
+                        default:
+                            typeLabel = obj.type;
+                    }
+                    
+                    resultsContainer.append(`
+                        <tr>
+                            <td>${typeLabel}</td>
+                            <td>${obj.name}</td>
+                            <td>${obj.ipAddress}</td>
+                            <td>${obj.zone || '-'}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary" 
+                                    onclick="selectSourceObject(${obj.id}, '${obj.type}', '${obj.name}')">
+                                    선택
+                                </button>
+                            </td>
+                        </tr>
+                    `);
+                });
+            }
         },
         error: function(xhr, status, error) {
-            resultsContainer.innerHTML = `
-                <tr>
-                    <td colspan="5" class="text-center text-danger">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        출발지 객체 검색 중 오류가 발생했습니다: ${error}
-                    </td>
-                </tr>
-            `;
+            resultsContainer.html(`<tr><td colspan="5" class="text-center text-danger">검색 중 오류가 발생했습니다: ${error}</td></tr>`);
         }
     });
 }
 
 /**
- * 출발지 객체 목록 렌더링
- * @param {Array} objects 출발지 객체 목록
- */
-function renderSourceObjects(objects) {
-    const resultsContainer = document.getElementById('sourceSearchResults');
-    let html = '';
-    
-    if (objects.length === 0) {
-        html = `
-            <tr>
-                <td colspan="5" class="text-center">
-                    <i class="bi bi-info-circle me-2"></i>
-                    검색 결과가 없습니다.
-                </td>
-            </tr>
-        `;
-    } else {
-        objects.forEach(obj => {
-            const type = getObjectTypeDisplay(obj.type);
-            
-            html += `
-                <tr>
-                    <td>${type}</td>
-                    <td>${obj.name}</td>
-                    <td>${obj.ipAddress}</td>
-                    <td>${obj.zone || '-'}</td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-primary" 
-                                onclick="selectSourceObject('${obj.id}', '${obj.type}', '${obj.name}')">
-                            선택
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-    }
-    
-    resultsContainer.innerHTML = html;
-}
-
-/**
- * 출발지 객체 유형 표시명 조회
- * @param {string} type 객체 유형 ('SERVER', 'GENERAL', 'NETWORK')
- * @returns {string} 표시용 유형명
- */
-function getObjectTypeDisplay(type) {
-    switch (type) {
-        case 'SERVER': return '연동서버';
-        case 'GENERAL': return '일반객체';
-        case 'NETWORK': return '네트워크객체';
-        default: return type;
-    }
-}
-
-/**
  * 출발지 객체 선택
- * @param {string} id 객체 ID
- * @param {string} type 객체 유형
- * @param {string} name 객체 이름
+ * @param {number} id - 객체 ID
+ * @param {string} type - 객체 타입
+ * @param {string} name - 객체 이름
  */
 function selectSourceObject(id, type, name) {
-    if (currentModalMode === 'add') {
-        document.getElementById('sourceObjectId').value = id;
-        document.getElementById('sourceObjectType').value = type;
-        document.getElementById('sourceObjectName').value = name;
-    } else {
-        document.getElementById('edit-sourceObjectId').value = id;
-        document.getElementById('edit-sourceObjectType').value = type;
-        document.getElementById('edit-sourceObjectName').value = name;
-    }
+    const prefix = window.currentSourceTarget === 'edit' ? 'edit-' : '';
     
-    // 검색 모달 닫기
+    // 폼에 데이터 설정
+    $(`#${prefix}sourceObjectId`).val(id);
+    $(`#${prefix}sourceObjectType`).val(type);
+    $(`#${prefix}sourceObjectName`).val(name);
+    
+    // 모달 닫기
     $('#sourceSearchModal').modal('hide');
 }
 
 /**
- * 문자열의 첫 글자를 대문자로 변환
- * @param {string} string 변환할 문자열
- * @returns {string} 첫 글자가 대문자인 문자열
+ * 정책 수정 모달 열기
+ * @param {number} id - 정책 ID
  */
-function capitalizeFirstLetter(string) {
-    if (!string) return '';
-    return string.charAt(0).toUpperCase() + string.slice(1);
+function editPolicy(id) {
+    // 정책 정보 로드
+    $.ajax({
+        url: `/rule/${id}`,
+        type: 'GET',
+        success: function(policy) {
+            // 폼에 데이터 설정
+            $('#edit-id').val(policy.id);
+            $('#edit-priority').val(policy.priority);
+            $('#edit-sourceObjectId').val(policy.sourceObjectId);
+            $('#edit-sourceObjectType').val(policy.sourceObjectType);
+            $('#edit-sourceObjectName').val(policy.sourceObjectName);
+            $('#edit-protocol').val(policy.protocol);
+            $('#edit-portMode').val(policy.portMode);
+            $('#edit-startPort').val(policy.startPort);
+            $('#edit-endPort').val(policy.endPort);
+            $('#edit-action').val(policy.action);
+            $('#edit-timeLimit').val(policy.timeLimit);
+            $('#edit-logging').val(policy.logging.toString());
+            $('#edit-requester').val(policy.requester);
+            $('#edit-description').val(policy.description);
+            
+            // 서버 ID 설정 (수정 불가)
+            $('#edit-serverObjectId').val(policy.serverObjectId).trigger('change');
+            $('#edit-serverObjectId-hidden').val(policy.serverObjectId);
+            
+            // 포트 입력 필드 업데이트
+            updatePortInputs('edit');
+            
+            // 모달 표시
+            $('#editPolicyModal').modal('show');
+        },
+        error: function(xhr, status, error) {
+            alert(`정책 정보를 불러오는 중 오류가 발생했습니다: ${error}`);
+        }
+    });
+}
+
+/**
+ * 정책 삭제
+ * @param {number} id - 정책 ID
+ */
+function deletePolicy(id) {
+    if (confirm('이 정책을 삭제하시겠습니까?')) {
+        $('#deletePolicyId').val(id);
+        $('#deletePolicyForm').submit();
+    }
+}
+
+/**
+ * 폼 검증 및 제출
+ * @param {string} formId - 폼 ID
+ */
+function validateAndSubmit(formId) {
+    const form = document.getElementById(formId);
+    const prefix = formId === 'editPolicyForm' ? 'edit-' : '';
+    
+    // 포트 모드 확인
+    const portMode = $(`#${prefix}portMode`).val();
+    
+    // Multi 모드인 경우 포트 범위 유효성 검사
+    if (portMode === 'multi') {
+        const startPort = parseInt($(`#${prefix}startPort`).val());
+        const endPort = parseInt($(`#${prefix}endPort`).val());
+        
+        if (endPort <= startPort) {
+            alert('종료 포트는 시작 포트보다 커야 합니다.');
+            return false;
+        }
+    }
+    
+    // 모든 검증 통과 시 폼 제출
+    form.submit();
 }

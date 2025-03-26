@@ -17,17 +17,18 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
     // 서버 ID로 정책 목록 페이징 조회
     Page<Policy> findByServerObjectIdOrderByPriorityAsc(Long serverObjectId, Pageable pageable);
     
-    // 검색 조건으로 정책 목록 조회
+    // 검색 조건으로 정책 목록 조회 (port 필드를 startPort로 변경)
     @Query("SELECT p FROM Policy p WHERE " +
             "(:serverId IS NULL OR p.serverObject.id = :serverId) AND " +
             "(:searchText IS NULL OR :searchText = '' OR " +
-            "CAST(p.priority AS string) LIKE %:searchText% OR " +
-            "p.protocol LIKE %:searchText% OR " +
-            "CAST(p.port AS string) LIKE %:searchText% OR " +
-            "p.action LIKE %:searchText% OR " +
-            "p.requester LIKE %:searchText% OR " +
-            "p.registrar LIKE %:searchText% OR " +
-            "p.description LIKE %:searchText%) " +
+            "CAST(p.priority AS string) LIKE CONCAT('%', :searchText, '%') OR " +
+            "p.protocol LIKE CONCAT('%', :searchText, '%') OR " +
+            "CAST(p.startPort AS string) LIKE CONCAT('%', :searchText, '%') OR " +  // port를 startPort로 변경
+            "CAST(p.endPort AS string) LIKE CONCAT('%', :searchText, '%') OR " +    // endPort 검색 추가
+            "p.action LIKE CONCAT('%', :searchText, '%') OR " +
+            "p.requester LIKE CONCAT('%', :searchText, '%') OR " +
+            "p.registrar LIKE CONCAT('%', :searchText, '%') OR " +
+            "p.description LIKE CONCAT('%', :searchText, '%')) " +
             "ORDER BY p.serverObject.id ASC, p.priority ASC")
     Page<Policy> searchPolicies(
             @Param("serverId") Long serverId,

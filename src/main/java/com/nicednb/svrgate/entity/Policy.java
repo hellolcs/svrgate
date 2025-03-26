@@ -34,7 +34,10 @@ public class Policy {
     private String portMode; // 포트 모드 (single, multi)
 
     @Column(nullable = false)
-    private Integer port; // 포트
+    private Integer startPort; // 시작 포트
+    
+    @Column
+    private Integer endPort; // 끝 포트 (portMode가 multi인 경우에만 사용)
 
     @Column(nullable = false, length = 10)
     private String action; // 동작 (accept, reject)
