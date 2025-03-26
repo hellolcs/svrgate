@@ -139,6 +139,7 @@
                                         <th style="width: 120px;">포트</th>
                                         <th style="width: 80px;">동작</th>
                                         <th style="width: 100px;">시간제한(h)</th>
+                                        <th style="width: 120px;">만료 시간</th>
                                         <th style="width: 80px;">로깅</th>
                                         <th style="width: 120px;">등록일</th>
                                         <th style="width: 120px;">요청자</th>
@@ -373,7 +374,7 @@
                         <div class="form-group row mb-3">
                             <label for="edit-serverObjectId" class="col-sm-3 col-form-label">서버</label>
                             <div class="col-sm-9">
-                                <select class="form-control select2" id="edit-serverObjectId" name="serverObjectId" required readonly disabled>
+                                <select class="form-control select2" id="edit-serverObjectId" name="serverObjectId" required disabled>
                                     <option value="">선택하세요</option>
                                     <option th:each="server : ${serverPolicySummaries}" 
                                             th:value="${server.serverId}" 
@@ -383,106 +384,114 @@
                             </div>
                         </div>
                         
-                        <!-- Priority(우선순위) -->
+                        <!-- Priority(우선순위) - 수정 불가 -->
                         <div class="form-group row mb-3">
                             <label for="edit-priority" class="col-sm-3 col-form-label">우선순위</label>
                             <div class="col-sm-9">
-                                <input type="number" class="form-control" id="edit-priority" name="priority" min="1" required>
+                                <input type="number" class="form-control" id="edit-priority" name="priority" min="1" required disabled>
+                                <input type="hidden" id="edit-priority-hidden" name="priority">
                             </div>
                         </div>
                         
-                        <!-- 출발지 객체 -->
+                        <!-- 출발지 객체 - 수정 불가 -->
                         <div class="form-group row mb-3">
                             <label for="edit-sourceObjectName" class="col-sm-3 col-form-label">출발지</label>
                             <div class="col-sm-9">
                                 <div class="input-group">
-                                    <input type="text" class="form-control" id="edit-sourceObjectName" readonly required>
+                                    <input type="text" class="form-control" id="edit-sourceObjectName" readonly disabled>
                                     <input type="hidden" id="edit-sourceObjectId" name="sourceObjectId">
                                     <input type="hidden" id="edit-sourceObjectType" name="sourceObjectType">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="openSourceSearchModal('edit')">
+                                    <button type="button" class="btn btn-outline-secondary" disabled>
                                         출발지 찾기
                                     </button>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Protocol -->
+                        <!-- Protocol - 수정 불가 -->
                         <div class="form-group row mb-3">
                             <label for="edit-protocol" class="col-sm-3 col-form-label">프로토콜</label>
                             <div class="col-sm-9">
-                                <select class="form-control" id="edit-protocol" name="protocol" required>
+                                <select class="form-control" id="edit-protocol" name="protocol" required disabled>
                                     <option value="">선택하세요</option>
                                     <option value="tcp">TCP</option>
                                     <option value="udp">UDP</option>
                                 </select>
+                                <input type="hidden" id="edit-protocol-hidden" name="protocol">
                             </div>
                         </div>
                         
-                        <!-- Port Mode -->
+                        <!-- Port Mode - 수정 불가 -->
                         <div class="form-group row mb-3">
                             <label for="edit-portMode" class="col-sm-3 col-form-label">포트 모드</label>
                             <div class="col-sm-9">
-                                <select class="form-control" id="edit-portMode" name="portMode" required onchange="updatePortInputs('edit')">
+                                <select class="form-control" id="edit-portMode" name="portMode" required disabled>
                                     <option value="">선택하세요</option>
                                     <option value="single">Single</option>
                                     <option value="multi">Multi</option>
                                 </select>
+                                <input type="hidden" id="edit-portMode-hidden" name="portMode">
                             </div>
                         </div>
                         
-                        <!-- Port Range -->
+                        <!-- Port Range - 수정 불가 -->
                         <div class="form-group row mb-3">
                             <label for="edit-startPort" class="col-sm-3 col-form-label">포트</label>
                             <div class="col-sm-9">
                                 <div class="port-range-container">
-                                    <input type="number" class="form-control" id="edit-startPort" name="startPort" min="1" max="65535" required>
+                                    <input type="number" class="form-control" id="edit-startPort" min="1" max="65535" disabled>
                                     <div class="port-range-separator">-</div>
-                                    <input type="number" class="form-control" id="edit-endPort" name="endPort" min="1" max="65535">
+                                    <input type="number" class="form-control" id="edit-endPort" min="1" max="65535" disabled>
+                                    <input type="hidden" id="edit-startPort-hidden" name="startPort">
+                                    <input type="hidden" id="edit-endPort-hidden" name="endPort">
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Action -->
+                        <!-- Action - 수정 불가 -->
                         <div class="form-group row mb-3">
                             <label for="edit-action" class="col-sm-3 col-form-label">동작</label>
                             <div class="col-sm-9">
-                                <select class="form-control" id="edit-action" name="action" required>
+                                <select class="form-control" id="edit-action" required disabled>
                                     <option value="">선택하세요</option>
                                     <option value="accept">Accept</option>
                                     <option value="reject">Reject</option>
                                 </select>
+                                <input type="hidden" id="edit-action-hidden" name="action">
                             </div>
                         </div>
                         
-                        <!-- Time Limit -->
+                        <!-- Time Limit - 수정 불가 -->
                         <div class="form-group row mb-3">
                             <label for="edit-timeLimit" class="col-sm-3 col-form-label">시간제한(h)</label>
                             <div class="col-sm-9">
-                                <input type="number" class="form-control" id="edit-timeLimit" name="timeLimit" min="0">
+                                <input type="number" class="form-control" id="edit-timeLimit" min="0" disabled>
+                                <input type="hidden" id="edit-timeLimit-hidden" name="timeLimit">
                             </div>
                         </div>
                         
-                        <!-- Logging -->
+                        <!-- Logging - 수정 불가 -->
                         <div class="form-group row mb-3">
                             <label for="edit-logging" class="col-sm-3 col-form-label">로깅</label>
                             <div class="col-sm-9">
-                                <select class="form-control" id="edit-logging" name="logging" required>
+                                <select class="form-control" id="edit-logging" required disabled>
                                     <option value="">선택하세요</option>
                                     <option value="true">사용</option>
                                     <option value="false">미사용</option>
                                 </select>
+                                <input type="hidden" id="edit-logging-hidden" name="logging">
                             </div>
                         </div>
                         
-                        <!-- Requester -->
+                        <!-- Requester - 수정 가능 -->
                         <div class="form-group row mb-3">
                             <label for="edit-requester" class="col-sm-3 col-form-label">요청자</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="edit-requester" name="requester" required>
+                                <input type="text" class="form-control" id="edit-requester" name="requester">
                             </div>
                         </div>
                         
-                        <!-- Description -->
+                        <!-- Description - 수정 가능 -->
                         <div class="form-group row mb-3">
                             <label for="edit-description" class="col-sm-3 col-form-label">설명</label>
                             <div class="col-sm-9">

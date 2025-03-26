@@ -49,8 +49,10 @@ public class PolicyDto {
 
     private LocalDateTime registrationDate; // 등록일
     private String registrationDateFormatted; // 등록일 포맷팅된 문자열
+    
+    private LocalDateTime expiresAt; // 정책 만료 시간 (추가됨)
+    private String expiresAtFormatted; // 만료 시간 포맷팅된 문자열 (추가됨)
 
-    @NotEmpty(message = "요청자를 입력해주세요.")
     private String requester; // 요청자
 
     private String registrar; // 등록자 (계정 Name)

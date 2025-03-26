@@ -274,7 +274,7 @@ public class PolicyService {
     }
 
     /**
-     * 정책 수정
+     * 정책 수정 - 요청자와 설명만 수정 가능
      */
     @Transactional
     public PolicyDto updatePolicy(PolicyDto policyDto, String ipAddress) {
@@ -287,35 +287,14 @@ public class PolicyService {
                 .orElseThrow(() -> new IllegalArgumentException("정책을 찾을 수 없습니다: " + policyDto.getId()));
 
         // 서버 존재 여부 확인
-        ServerObject serverObject = serverObjectRepository.findById(policyDto.getServerObjectId())
-                .orElseThrow(() -> new IllegalArgumentException("서버를 찾을 수 없습니다: " + policyDto.getServerObjectId()));
+        ServerObject serverObject = existingPolicy.getServerObject(); // 기존 서버 객체 사용
 
-        // 서버가 활성화 상태인지 확인
-        if (!serverObject.isActive()) {
-            throw new IllegalArgumentException("비활성화된 서버에는 정책을 추가할 수 없습니다: " + serverObject.getName());
-        }
-
-        // 출발지 객체 존재 여부 확인
-        validateSourceObject(policyDto.getSourceObjectId(), policyDto.getSourceObjectType());
-
-        // 포트 범위 유효성 검사 (Multi 모드인 경우)
-        if ("multi".equals(policyDto.getPortMode()) &&
-                policyDto.getEndPort() != null &&
-                policyDto.getStartPort() != null &&
-                policyDto.getEndPort() <= policyDto.getStartPort()) {
-            throw new IllegalArgumentException("종료 포트는 시작 포트보다 커야 합니다.");
-        }
-
-        // DTO를 엔티티로 변환 및 기존 값 유지
-        Policy policy = convertToEntity(policyDto);
-        policy.setId(existingPolicy.getId());
-        policy.setServerObject(serverObject);
-        policy.setRegistrationDate(existingPolicy.getRegistrationDate()); // 등록일은 유지
-        policy.setRegistrar(existingPolicy.getRegistrar()); // 등록자는 유지
-        policy.setCreatedAt(existingPolicy.getCreatedAt()); // 생성 시각 유지
+        // 요청자와 설명만 업데이트
+        existingPolicy.setRequester(policyDto.getRequester());
+        existingPolicy.setDescription(policyDto.getDescription());
 
         // 정책 저장
-        Policy updatedPolicy = policyRepository.save(policy);
+        Policy updatedPolicy = policyRepository.save(existingPolicy);
 
         // 작업 로그 기록
         operationLogService.logOperation(
@@ -324,7 +303,7 @@ public class PolicyService {
                 true,
                 "정책 ID: " + updatedPolicy.getId() + ", 서버: " + serverObject.getName(),
                 "정책관리",
-                "정책 수정");
+                "정책 메타정보 수정(요청자/설명)");
 
         return convertToDto(updatedPolicy);
     }
@@ -438,9 +417,16 @@ public class PolicyService {
         dto.setTimeLimit(policy.getTimeLimit());
         dto.setLogging(policy.getLogging());
         dto.setRegistrationDate(policy.getRegistrationDate());
+        dto.setExpiresAt(policy.getExpiresAt()); // 만료 시간 설정
 
         if (policy.getRegistrationDate() != null) {
             dto.setRegistrationDateFormatted(policy.getRegistrationDate().format(DATE_TIME_FORMATTER));
+        }
+
+        if (policy.getExpiresAt() != null) {
+            dto.setExpiresAtFormatted(policy.getExpiresAt().format(DATE_TIME_FORMATTER));
+        } else {
+            dto.setExpiresAtFormatted("무기한");
         }
 
         dto.setRequester(policy.getRequester());

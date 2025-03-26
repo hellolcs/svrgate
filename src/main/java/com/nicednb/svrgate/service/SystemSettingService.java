@@ -32,6 +32,7 @@ public class SystemSettingService {
     public static final String KEY_CONCURRENT_SERVERS = "concurrent_servers";
     public static final String KEY_FIREWALL_POLICY_CYCLE = "firewall_policy_cycle";
     public static final String KEY_CONCURRENT_FIREWALLS = "concurrent_firewalls";
+    public static final String KEY_POLICY_EXPIRY_CHECK_CYCLE = "policy_expiry_check_cycle"; // 추가됨
     
     // 그룹 상수 정의
     public static final String GROUP_BASIC = "basic";
@@ -60,6 +61,7 @@ public class SystemSettingService {
         createDefaultSettingIfNotExists(KEY_CONCURRENT_SERVERS, "10", "동시 수집 서버 수(개)", GROUP_INTEGRATION);
         createDefaultSettingIfNotExists(KEY_FIREWALL_POLICY_CYCLE, "300", "방화벽정책 수집주기(초)", GROUP_INTEGRATION);
         createDefaultSettingIfNotExists(KEY_CONCURRENT_FIREWALLS, "5", "동시 수집 방화벽 수(개)", GROUP_INTEGRATION);
+        createDefaultSettingIfNotExists(KEY_POLICY_EXPIRY_CHECK_CYCLE, "3600", "정책 만료 확인 주기(초)", GROUP_INTEGRATION); // 추가됨
         
         // 캐시에 모든 설정 로드
         refreshCache();
@@ -77,6 +79,7 @@ public class SystemSettingService {
         settingDescriptions.put(KEY_CONCURRENT_SERVERS, "동시 수집 서버 수(개)");
         settingDescriptions.put(KEY_FIREWALL_POLICY_CYCLE, "방화벽정책 수집주기(초)");
         settingDescriptions.put(KEY_CONCURRENT_FIREWALLS, "동시 수집 방화벽 수(개)");
+        settingDescriptions.put(KEY_POLICY_EXPIRY_CHECK_CYCLE, "정책 만료 확인 주기(초)"); // 추가됨
     }
     
     /**
@@ -125,6 +128,7 @@ public class SystemSettingService {
         dto.setConcurrentServers(getIntegerValue(KEY_CONCURRENT_SERVERS, 10));
         dto.setFirewallPolicyCycle(getIntegerValue(KEY_FIREWALL_POLICY_CYCLE, 300));
         dto.setConcurrentFirewalls(getIntegerValue(KEY_CONCURRENT_FIREWALLS, 5));
+        dto.setPolicyExpiryCheckCycle(getIntegerValue(KEY_POLICY_EXPIRY_CHECK_CYCLE, 3600)); // 추가됨
         
         return dto;
     }
@@ -148,6 +152,7 @@ public class SystemSettingService {
         trackSettingChange(changeLog, KEY_CONCURRENT_SERVERS, dto.getConcurrentServers(), GROUP_INTEGRATION);
         trackSettingChange(changeLog, KEY_FIREWALL_POLICY_CYCLE, dto.getFirewallPolicyCycle(), GROUP_INTEGRATION);
         trackSettingChange(changeLog, KEY_CONCURRENT_FIREWALLS, dto.getConcurrentFirewalls(), GROUP_INTEGRATION);
+        trackSettingChange(changeLog, KEY_POLICY_EXPIRY_CHECK_CYCLE, dto.getPolicyExpiryCheckCycle(), GROUP_INTEGRATION); // 추가됨
         
         // 캐시 새로고침
         refreshCache();

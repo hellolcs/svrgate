@@ -51,6 +51,9 @@ public class Policy {
     @Column(nullable = false)
     private LocalDateTime registrationDate; // 등록일
 
+    @Column
+    private LocalDateTime expiresAt; // 정책 만료 시간 (추가됨)
+
     @Column(length = 32, columnDefinition = "VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String requester; // 요청자
 
@@ -79,11 +82,24 @@ public class Policy {
         if (this.registrationDate == null) {
             this.registrationDate = this.createdAt;
         }
+        
+        // 시간제한이 설정된 경우 만료 시간 계산
+        if (this.timeLimit != null && this.timeLimit > 0) {
+            this.expiresAt = this.createdAt.plusHours(this.timeLimit);
+        }
     }
 
     // 수정 전 이벤트
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+        
+        // 시간제한이 변경된 경우 만료 시간 재계산
+        if (this.timeLimit != null && this.timeLimit > 0) {
+            // 등록일 기준으로 만료 시간 계산
+            this.expiresAt = this.registrationDate.plusHours(this.timeLimit);
+        } else {
+            this.expiresAt = null; // 시간제한이 없는 경우 만료 시간을 null로 설정
+        }
     }
 }

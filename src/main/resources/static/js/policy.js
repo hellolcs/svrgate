@@ -1,23 +1,33 @@
 // 정책관리 JS
-$(document).ready(function() {
-    // Select2 초기화
-    $('.select2').select2({
-        theme: 'bootstrap-5',
-        width: '100%',
-        placeholder: '선택하세요',
-        allowClear: true
-    });
-    
-    // 포트 모드 변경 이벤트 리스너 추가
-    $('#portMode').on('change', function() {
-        updatePortInputs('');
-    });
-    
-    $('#edit-portMode').on('change', function() {
-        updatePortInputs('edit-');
-    });
+
+// DOM이 완전히 로드된 후 실행
+document.addEventListener('DOMContentLoaded', function() {
+    initializePolicyPage();
 });
 
+/**
+ * 정책 페이지 초기화
+ */
+function initializePolicyPage() {
+     $(document).ready(function() {
+        // Select2 초기화
+        $('.select2').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: '선택하세요',
+            allowClear: true
+        });
+        
+        // 포트 모드 변경 이벤트 리스너 추가
+        $('#portMode').on('change', function() {
+            updatePortInputs('');
+        });
+        
+        $('#edit-portMode').on('change', function() {
+            updatePortInputs('edit-');
+        });
+    });
+}
 /**
  * 포트 입력 필드 업데이트
  * @param {string} prefix - '' 또는 'edit-' 접두사
@@ -60,11 +70,15 @@ function toggleServerPanel(header) {
  * 정책 목록 로드
  * @param {number} serverId - 서버 ID
  */
+/**
+ * 정책 목록 로드
+ * @param {number} serverId - 서버 ID
+ */
 function loadPolicies(serverId) {
     const tableBody = $(`#policy-table-${serverId} tbody`);
     
     // 이미 로드된 경우 중복 로드 방지
-    if (tableBody.find('tr:first').find('td').length < 13) {
+    if (tableBody.find('tr:first').find('td').length < 14) { // 13에서 14로 변경
         $.ajax({
             url: `/rule/server/${serverId}`,
             type: 'GET',
@@ -74,7 +88,7 @@ function loadPolicies(serverId) {
                 if (policies.length === 0) {
                     tableBody.append(`
                         <tr>
-                            <td colspan="13" class="text-center">등록된 정책이 없습니다.</td>
+                            <td colspan="14" class="text-center">등록된 정책이 없습니다.</td>
                         </tr>
                     `);
                 } else {
@@ -94,6 +108,7 @@ function loadPolicies(serverId) {
                                 <td>${portDisplay}</td>
                                 <td>${policy.action === 'accept' ? 'Accept' : 'Reject'}</td>
                                 <td>${policy.timeLimit || '-'}</td>
+                                <td>${policy.expiresAtFormatted || '무기한'}</td> <!-- 만료 시간 컬럼 추가 -->
                                 <td>${policy.logging ? '사용' : '미사용'}</td>
                                 <td>${policy.registrationDateFormatted}</td>
                                 <td>${policy.requester || '-'}</td>
@@ -111,7 +126,7 @@ function loadPolicies(serverId) {
             error: function(xhr, status, error) {
                 tableBody.html(`
                     <tr>
-                        <td colspan="13" class="text-center text-danger">
+                        <td colspan="14" class="text-center text-danger"> <!-- 13에서 14로 변경 -->
                             정책 목록을 불러오는 중 오류가 발생했습니다: ${error}
                         </td>
                     </tr>
@@ -239,39 +254,71 @@ function selectSourceObject(id, type, name) {
  * @param {number} id - 정책 ID
  */
 function editPolicy(id) {
-    // 정책 정보 로드
+    // Ajax로 정책 정보 가져오기
     $.ajax({
-        url: `/rule/${id}`,
+        url: '/rule/' + id,
         type: 'GET',
-        success: function(policy) {
-            // 폼에 데이터 설정
-            $('#edit-id').val(policy.id);
-            $('#edit-priority').val(policy.priority);
-            $('#edit-sourceObjectId').val(policy.sourceObjectId);
-            $('#edit-sourceObjectType').val(policy.sourceObjectType);
-            $('#edit-sourceObjectName').val(policy.sourceObjectName);
-            $('#edit-protocol').val(policy.protocol);
-            $('#edit-portMode').val(policy.portMode);
-            $('#edit-startPort').val(policy.startPort);
-            $('#edit-endPort').val(policy.endPort);
-            $('#edit-action').val(policy.action);
-            $('#edit-timeLimit').val(policy.timeLimit);
-            $('#edit-logging').val(policy.logging.toString());
-            $('#edit-requester').val(policy.requester);
-            $('#edit-description').val(policy.description);
+        success: function(response) {
+            // 폼에 데이터 채우기
+            $('#edit-id').val(response.id);
             
-            // 서버 ID 설정 (수정 불가)
-            $('#edit-serverObjectId').val(policy.serverObjectId).trigger('change');
-            $('#edit-serverObjectId-hidden').val(policy.serverObjectId);
+            // 서버 객체 - select2는 trigger('change')가 필요함
+            $('#edit-serverObjectId').val(response.serverObjectId).trigger('change');
+            $('#edit-serverObjectId-hidden').val(response.serverObjectId);
             
-            // 포트 모드에 따라 UI 업데이트
-            updatePortInputs('edit-');
+            // 우선순위
+            $('#edit-priority').val(response.priority);
+            $('#edit-priority-hidden').val(response.priority);
             
-            // 모달 표시
+            // 출발지 객체
+            $('#edit-sourceObjectName').val(response.sourceObjectName);
+            $('#edit-sourceObjectId').val(response.sourceObjectId);
+            $('#edit-sourceObjectType').val(response.sourceObjectType);
+            
+            // 프로토콜
+            $('#edit-protocol').val(response.protocol);
+            $('#edit-protocol-hidden').val(response.protocol);
+            
+            // 포트 모드
+            $('#edit-portMode').val(response.portMode);
+            $('#edit-portMode-hidden').val(response.portMode);
+            
+            // 포트 범위
+            $('#edit-startPort').val(response.startPort);
+            $('#edit-startPort-hidden').val(response.startPort);
+            $('#edit-endPort').val(response.endPort);
+            $('#edit-endPort-hidden').val(response.endPort);
+            
+            // 동작
+            $('#edit-action').val(response.action);
+            $('#edit-action-hidden').val(response.action);
+            
+            // 시간제한
+            $('#edit-timeLimit').val(response.timeLimit);
+            $('#edit-timeLimit-hidden').val(response.timeLimit);
+            
+            // 로깅 - Boolean 값을 문자열로 변환하여 설정
+            $('#edit-logging').val(String(response.logging)).trigger('change');
+            $('#edit-logging-hidden').val(String(response.logging));
+            
+            // 수정 가능한 필드
+            $('#edit-requester').val(response.requester);
+            $('#edit-description').val(response.description);
+            
+            // select2 요소 재초기화
+            setTimeout(function() {
+                $('#edit-serverObjectId').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%',
+                    disabled: true
+                });
+            }, 100);
+            
+            // 모달 열기
             $('#editPolicyModal').modal('show');
         },
         error: function(xhr, status, error) {
-            alert(`정책 정보를 불러오는 중 오류가 발생했습니다: ${error}`);
+            alert('정책 정보를 가져오는 중 오류가 발생했습니다: ' + error);
         }
     });
 }

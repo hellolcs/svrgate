@@ -34,4 +34,9 @@ public class SystemSettingDto {
     @NotNull(message = "동시 수집 방화벽 수를 입력해주세요.")
     @Min(value = 1, message = "동시 수집 방화벽 수는 1 이상이어야 합니다.")
     private Integer concurrentFirewalls;
+    
+    // 정책 만료 확인 주기 추가
+    @NotNull(message = "정책 만료 확인 주기를 입력해주세요.")
+    @Min(value = 1, message = "정책 만료 확인 주기는 1 이상이어야 합니다.")
+    private Integer policyExpiryCheckCycle;
 }
