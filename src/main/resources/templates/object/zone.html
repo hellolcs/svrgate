@@ -47,21 +47,21 @@
         
         <!-- 검색 및 필터링 폼 -->
         <form action="/object/zone" method="get">
-            <div th:replace="layout/table-controls :: search-form(
+            <div th:replace="~{layout/table-controls :: search-form(
                 url='/object/zone', 
                 searchText=${searchText}, 
                 filterName='active', 
                 filterValues=${filterValues}, 
                 filterCurrent=${active}, 
-                size=${size})">
+                size=${size})}">
             </div>
         </form>
         
         <!-- 전체 개수 및 추가 버튼 -->
-        <div th:replace="layout/table-controls :: count-add-button(
+        <div th:replace="~{layout/table-controls :: count-add-button(
             totalItems=${zones.totalElements}, 
             addBtnLabel='Zone 추가', 
-            addBtnAction='$(\'#addZoneModal\').modal(\'show\')')">
+            addBtnAction='$(\'#addZoneModal\').modal(\'show\')')}">
         </div>
 
         <!-- Zone 목록 테이블 -->
@@ -115,13 +115,13 @@
         </table>
 
         <!-- 페이징 컨트롤 -->
-        <div th:replace="layout/table-controls :: pagination(
+        <div th:replace="~{layout/table-controls :: pagination(
             pageData=${zones}, 
             url='/object/zone', 
             searchText=${searchText}, 
             filterName='active', 
             filterValue=${active}, 
-            size=${size})">
+            size=${size})}">
         </div>
     </div>
 
