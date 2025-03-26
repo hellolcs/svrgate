@@ -5,59 +5,49 @@ import com.nicednb.svrgate.service.SystemSettingService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.SchedulingConfigurer;
-import org.springframework.scheduling.config.ScheduledTaskRegistrar;
-import org.springframework.scheduling.support.PeriodicTrigger;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
 /**
  * 정책 만료 확인 스케줄러 설정
  */
-@Configuration
-@EnableScheduling
+@Component
 @RequiredArgsConstructor
-public class PolicyExpirySchedulerConfig implements SchedulingConfigurer {
+public class PolicyExpirySchedulerConfig implements ApplicationRunner {
 
     private final Logger log = LoggerFactory.getLogger(PolicyExpirySchedulerConfig.class);
     private final SystemSettingService systemSettingService;
     private final PolicyExpiryService policyExpiryService;
-
+    
     @Override
-    public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
+    public void run(ApplicationArguments args) {
+        log.info("정책 만료 확인 스케줄러 초기화");
+        
+        // 스케줄러 생성
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("policy-expiry-");
+        scheduler.initialize();
+        
         // 시스템 설정에서 정책 만료 확인 주기 (초) 가져오기
         int checkCycleSeconds = systemSettingService.getIntegerValue(
                 SystemSettingService.KEY_POLICY_EXPIRY_CHECK_CYCLE, 3600);
         
-        log.info("정책 만료 확인 스케줄러 설정: {}초 주기", checkCycleSeconds);
+        // 정책 만료 확인 작업 등록 (1시간마다)
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                log.info("정책 만료 확인 실행");
+                policyExpiryService.checkAndRemoveExpiredPolicies();
+            } catch (Exception e) {
+                log.error("정책 만료 확인 중 오류 발생: {}", e.getMessage(), e);
+            }
+        }, checkCycleSeconds * 1000); // 밀리초 단위로 변환
         
-        // 주기적 트리거 생성
-        PeriodicTrigger trigger = new PeriodicTrigger(checkCycleSeconds, TimeUnit.SECONDS);
-        trigger.setInitialDelay(60); // 초기 지연 60초
-        
-        // 스케줄 등록
-        taskRegistrar.addTriggerTask(
-                // 실행할 작업
-                () -> {
-                    try {
-                        policyExpiryService.checkAndRemoveExpiredPolicies();
-                    } catch (Exception e) {
-                        log.error("정책 만료 확인 중 오류 발생: {}", e.getMessage(), e);
-                    }
-                },
-                // 트리거 (실행 주기)
-                triggerContext -> {
-                    // 최신 설정값 다시 조회 (동적 변경 가능)
-                    int currentCycle = systemSettingService.getIntegerValue(
-                            SystemSettingService.KEY_POLICY_EXPIRY_CHECK_CYCLE, 3600);
-                    
-                    // 트리거 주기 갱신
-                    trigger.setPeriod(currentCycle);
-                    
-                    return trigger.nextExecutionTime(triggerContext);
-                }
-        );
+        log.info("정책 만료 확인 스케줄러 설정 완료: {}초 주기", checkCycleSeconds);
     }
 }
