@@ -43,3 +43,14 @@ tasks.named('test') {
 tasks.withType(JavaCompile) {
     options.compilerArgs.add('-parameters')
 }
+
+// // for build jar
+// bootJar {
+//     // 템플릿 및 정적 리소스 포함 보장
+//     from('src/main/resources/templates') {
+//         into 'BOOT-INF/classes/templates'
+//     }
+//     from('src/main/resources/static') {
+//         into 'BOOT-INF/classes/static'
+//     }
+// }
