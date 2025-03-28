@@ -219,9 +219,6 @@ public class NetworkObjectService {
     public NetworkObjectDto updateNetworkObject(NetworkObjectDto dto, String ipAddress) {
         log.info("네트워크 객체 수정 시작: {}", dto.getName());
 
-        // 네트워크 객체 존재 여부 확인
-        NetworkObject existingNetworkObject = findById(dto.getId());
-
         // 네트워크 이름 중복 체크 (자기 자신 제외)
         networkObjectRepository.findByNameAndIdNot(dto.getName(), dto.getId())
                 .ifPresent(obj -> {

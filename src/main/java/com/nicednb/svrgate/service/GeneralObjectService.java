@@ -208,9 +208,6 @@ public class GeneralObjectService {
     public GeneralObjectDto updateGeneralObject(GeneralObjectDto dto, String ipAddress) {
         log.info("일반 객체 수정 시작: {}", dto.getName());
 
-        // 일반 객체 존재 여부 확인
-        GeneralObject existingGeneralObject = findById(dto.getId());
-
         // 일반 객체 이름 중복 체크 (자기 자신 제외)
         generalObjectRepository.findByNameAndIdNot(dto.getName(), dto.getId())
                 .ifPresent(obj -> {

@@ -293,9 +293,6 @@ public class ZoneObjectService {
     public ZoneObjectDto updateZone(ZoneObjectDto zoneDto, String ipAddress) {
         log.info("Zone 수정 시작: {}", zoneDto.getName());
 
-        // Zone 존재 여부 확인
-        ZoneObject existingZone = findById(zoneDto.getId());
-
         // Zone명 중복 체크 (자기 자신 제외)
         zoneRepository.findByNameAndIdNot(zoneDto.getName(), zoneDto.getId())
                 .ifPresent(zone -> {

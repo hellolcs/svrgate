@@ -222,9 +222,6 @@ public class ServerObjectService {
     public ServerObjectDto updateServerObject(ServerObjectDto dto, String ipAddress) {
         log.info("연동서버 객체 수정 시작: {}", dto.getName());
 
-        // 연동서버 객체 존재 여부 확인
-        ServerObject existingServerObject = findById(dto.getId());
-
         // 연동서버 객체 이름 중복 체크 (자기 자신 제외)
         serverObjectRepository.findByNameAndIdNot(dto.getName(), dto.getId())
                 .ifPresent(obj -> {
