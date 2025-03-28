@@ -9,6 +9,8 @@
     <link rel="stylesheet" th:href="@{/css/select2.min.css}" />
     <link rel="stylesheet" th:href="@{/css/select2-bootstrap-5-theme.min.css}" />
     <th:block th:replace="~{layout/table-controls :: table-styles}"></th:block>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <style>
         /* 모달 내부 폼 그룹 스타일 */
         .modal .form-group {

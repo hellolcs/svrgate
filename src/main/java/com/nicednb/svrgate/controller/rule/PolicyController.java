@@ -4,6 +4,8 @@ import com.nicednb.svrgate.dto.PolicyDto;
 import com.nicednb.svrgate.dto.SourceObjectDto;
 import com.nicednb.svrgate.service.AccountService;
 import com.nicednb.svrgate.service.PolicyService;
+import com.nicednb.svrgate.service.PolicyService.PolicyOperationException;
+import com.nicednb.svrgate.service.PolicyService.PolicyOperationResult;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +21,9 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequiredArgsConstructor
@@ -75,79 +79,127 @@ public class PolicyController {
     }
     
     /**
-     * 정책 추가
+     * 정책 추가 (JSON 응답 추가)
      */
     @PostMapping("/add")
-    public String addPolicy(@Valid @ModelAttribute("policyDto") PolicyDto policyDto,
+    public ResponseEntity<Map<String, Object>> addPolicy(@Valid @ModelAttribute("policyDto") PolicyDto policyDto,
                            BindingResult bindingResult,
-                           HttpServletRequest request,
-                           RedirectAttributes redirectAttributes) {
+                           HttpServletRequest request) {
         log.info("정책 추가 요청: serverId={}, priority={}", policyDto.getServerObjectId(), policyDto.getPriority());
         
+        Map<String, Object> response = new HashMap<>();
+        
+        // 유효성 검증 실패 시 오류 응답 반환
         if (bindingResult.hasErrors()) {
             log.warn("정책 추가 폼 유효성 검사 실패: {}", bindingResult.getAllErrors());
-            redirectAttributes.addFlashAttribute("errorMessage", "입력 값을 확인해주세요.");
-            return "redirect:/rule";
+            response.put("success", false);
+            response.put("message", "입력 값을 확인해주세요.");
+            return ResponseEntity.badRequest().body(response);
         }
         
         try {
             String ipAddress = accountService.getClientIpAddress(request);
-            policyService.createPolicy(policyDto, ipAddress);
-            redirectAttributes.addFlashAttribute("successMessage", "정책이 성공적으로 추가되었습니다.");
+            
+            // 정책 추가 (방화벽 API 호출 포함)
+            PolicyOperationResult result = policyService.createPolicy(policyDto, ipAddress);
+            
+            // API 응답 결과에 따라 처리
+            if (result.isSuccess()) {
+                response.put("success", true);
+                response.put("message", result.getMessage());
+                response.put("policy", result.getPolicyDto());
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("success", false);
+                response.put("message", result.getMessage());
+                return ResponseEntity.ok(response);
+            }
+        } catch (PolicyOperationException e) {
+            log.error("정책 추가 중 오류 발생: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
         } catch (Exception e) {
             log.error("정책 추가 중 오류 발생: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", "정책 추가 중 오류가 발생했습니다: " + e.getMessage());
+            response.put("success", false);
+            response.put("message", "정책 추가 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
         }
-        
-        return "redirect:/rule";
     }
     
     /**
-     * 정책 수정
+     * 정책 수정 (JSON 응답 추가)
      */
     @PostMapping("/update")
-    public String updatePolicy(@Valid @ModelAttribute("policyDto") PolicyDto policyDto,
+    public ResponseEntity<Map<String, Object>> updatePolicy(@Valid @ModelAttribute("policyDto") PolicyDto policyDto,
                               BindingResult bindingResult,
-                              HttpServletRequest request,
-                              RedirectAttributes redirectAttributes) {
+                              HttpServletRequest request) {
         log.info("정책 수정 요청: id={}, serverId={}, priority={}", policyDto.getId(), policyDto.getServerObjectId(), policyDto.getPriority());
         
+        Map<String, Object> response = new HashMap<>();
+        
+        // 유효성 검증 실패 시 오류 응답 반환
         if (bindingResult.hasErrors()) {
             log.warn("정책 수정 폼 유효성 검사 실패: {}", bindingResult.getAllErrors());
-            redirectAttributes.addFlashAttribute("errorMessage", "입력 값을 확인해주세요.");
-            return "redirect:/rule";
+            response.put("success", false);
+            response.put("message", "입력 값을 확인해주세요.");
+            return ResponseEntity.badRequest().body(response);
         }
         
         try {
             String ipAddress = accountService.getClientIpAddress(request);
-            policyService.updatePolicy(policyDto, ipAddress);
-            redirectAttributes.addFlashAttribute("successMessage", "정책이 성공적으로 수정되었습니다.");
+            
+            // 정책 수정 (요청자와 설명만 업데이트)
+            PolicyDto updatedPolicy = policyService.updatePolicy(policyDto, ipAddress);
+            
+            response.put("success", true);
+            response.put("message", "정책이 성공적으로 수정되었습니다.");
+            response.put("policy", updatedPolicy);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("정책 수정 중 오류 발생: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", "정책 수정 중 오류가 발생했습니다: " + e.getMessage());
+            response.put("success", false);
+            response.put("message", "정책 수정 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
         }
-        
-        return "redirect:/rule";
     }
     
     /**
-     * 정책 삭제
+     * 정책 삭제 (JSON 응답 추가)
      */
     @PostMapping("/delete")
-    public String deletePolicy(@RequestParam("id") Long id,
-                              HttpServletRequest request,
-                              RedirectAttributes redirectAttributes) {
+    public ResponseEntity<Map<String, Object>> deletePolicy(@RequestParam("id") Long id,
+                              HttpServletRequest request) {
         log.info("정책 삭제 요청: id={}", id);
+        
+        Map<String, Object> response = new HashMap<>();
         
         try {
             String ipAddress = accountService.getClientIpAddress(request);
-            policyService.deletePolicy(id, ipAddress);
-            redirectAttributes.addFlashAttribute("successMessage", "정책이 성공적으로 삭제되었습니다.");
+            
+            // 정책 삭제 (방화벽 API 호출 포함)
+            PolicyOperationResult result = policyService.deletePolicy(id, ipAddress);
+            
+            // API 응답 결과에 따라 처리
+            if (result.isSuccess()) {
+                response.put("success", true);
+                response.put("message", result.getMessage());
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("success", false);
+                response.put("message", result.getMessage());
+                return ResponseEntity.ok(response);
+            }
+        } catch (PolicyOperationException e) {
+            log.error("정책 삭제 중 오류 발생: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
         } catch (Exception e) {
             log.error("정책 삭제 중 오류 발생: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", "정책 삭제 중 오류가 발생했습니다: " + e.getMessage());
+            response.put("success", false);
+            response.put("message", "정책 삭제 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
         }
-        
-        return "redirect:/rule";
     }
 }
