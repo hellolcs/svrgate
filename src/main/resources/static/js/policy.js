@@ -28,8 +28,45 @@ function initializePolicy() {
         updatePortInputs('');
     });
     
+    $('#edit-portMode').on('change', function() {
+        updatePortInputs('edit-');
+    });
+    
     // 폼 제출 이벤트 핸들러 설정
     configureFormSubmission();
+    
+    // 모달 이벤트 핸들러 설정
+    setupModalEvents();
+}
+
+/**
+ * 모달 이벤트 핸들러 설정
+ */
+function setupModalEvents() {
+    // 정책 추가 모달 초기화
+    $('#addPolicyModal').on('show.bs.modal', function() {
+        // 폼 초기화
+        $('#addPolicyForm')[0].reset();
+        
+        // 출발지 객체 필드 초기화
+        $('#sourceObjectId').val('');
+        $('#sourceObjectType').val('');
+        $('#sourceObjectName').val('');
+        
+        // Select2 초기화
+        $('#serverObjectId').val('').trigger('change');
+        
+        // 포트 입력 필드 초기화
+        updatePortInputs('');
+        
+        console.log('정책 추가 모달 초기화 완료');
+    });
+    
+    // 출발지 검색 모달 이벤트
+    $('#sourceSearchModal').on('shown.bs.modal', function() {
+        console.log('출발지 검색 모달이 열렸습니다. Prefix:', $(this).data('prefix'));
+        $('#sourceSearchInput').focus();
+    });
 }
 
 /**
@@ -105,7 +142,7 @@ function renderPolicyTable(tbody, policies) {
         html += `
         <tr>
             <td>${policy.priority}</td>
-            <td>${policy.sourceObjectName}</td>
+            <td>${escapeHtml(policy.sourceObjectName)}</td>
             <td>${policy.protocol.toUpperCase()}</td>
             <td>${policy.portMode === 'single' ? '단일' : '범위'}</td>
             <td>${policy.portMode === 'single' ? policy.startPort : `${policy.startPort}-${policy.endPort}`}</td>
@@ -132,12 +169,6 @@ function renderPolicyTable(tbody, policies) {
  * 정책 추가 모달 표시
  */
 function showAddPolicyModal() {
-    // 폼 초기화
-    $('#addPolicyForm')[0].reset();
-    
-    // Select2 초기화
-    $('#serverObjectId').val('').trigger('change');
-    
     // 모달 표시
     $('#addPolicyModal').modal('show');
 }
@@ -202,6 +233,7 @@ function showEditPolicyModal(id) {
 function openSourceSearchModal(prefix) {
     // 현재 접두사 저장 (add 또는 edit)
     $('#sourceSearchModal').data('prefix', prefix);
+    console.log('모달 열기 - 설정된 prefix:', prefix);
     
     // 검색 결과 초기화
     $('#sourceSearchResults').html('<tr><td colspan="5" class="text-center">검색어를 입력하고 검색 버튼을 클릭하세요.</td></tr>');
@@ -235,14 +267,18 @@ function searchSourceObjects() {
             
             let html = '';
             response.forEach(obj => {
+                // 특수문자 문제를 방지하기 위해 데이터 속성 사용
                 html += `
                 <tr>
                     <td>${getSourceTypeLabel(obj.type)}</td>
-                    <td>${obj.name}</td>
-                    <td>${obj.ipAddress}</td>
-                    <td>${obj.zone || '-'}</td>
+                    <td>${escapeHtml(obj.name)}</td>
+                    <td>${escapeHtml(obj.ipAddress)}</td>
+                    <td>${obj.zone ? escapeHtml(obj.zone) : '-'}</td>
                     <td>
-                        <button type="button" class="btn btn-sm btn-primary" onclick="selectSourceObject('${obj.id}', '${obj.type}', '${obj.name}')">
+                        <button type="button" class="btn btn-sm btn-primary source-select-btn" 
+                                data-id="${obj.id}" 
+                                data-type="${obj.type}" 
+                                data-name="${escapeHtml(obj.name)}">
                             선택
                         </button>
                     </td>
@@ -251,11 +287,32 @@ function searchSourceObjects() {
             });
             
             resultsContainer.html(html);
+            
+            // 이벤트 위임 방식으로 변경
+            resultsContainer.find('.source-select-btn').on('click', function() {
+                const id = $(this).data('id');
+                const type = $(this).data('type');
+                const name = $(this).data('name');
+                selectSourceObject(id, type, name);
+            });
         },
         error: function(xhr, status, error) {
             resultsContainer.html(`<tr><td colspan="5" class="text-center text-danger">검색 중 오류가 발생했습니다: ${error}</td></tr>`);
         }
     });
+}
+
+/**
+ * HTML 특수 문자 이스케이프
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 /**
@@ -274,15 +331,31 @@ function getSourceTypeLabel(type) {
  * 출발지 객체 선택
  */
 function selectSourceObject(id, type, name) {
-    const prefix = $('#sourceSearchModal').data('prefix') || '';
-    
-    // 선택된 출발지 객체 정보 설정
-    $(`#${prefix}sourceObjectId`).val(id);
-    $(`#${prefix}sourceObjectType`).val(type);
-    $(`#${prefix}sourceObjectName`).val(name);
-    
-    // 모달 닫기
-    $('#sourceSearchModal').modal('hide');
+    try {
+        // 디버깅용 로그 추가
+        console.log('선택된 출발지 객체:', {id, type, name});
+        
+        const prefix = $('#sourceSearchModal').data('prefix') || '';
+        console.log('현재 prefix:', prefix);
+        
+        // 선택된 출발지 객체 정보 설정
+        $(`#${prefix}sourceObjectId`).val(id);
+        $(`#${prefix}sourceObjectType`).val(type);
+        $(`#${prefix}sourceObjectName`).val(name);
+        
+        // 값이 제대로 설정되었는지 확인
+        console.log('설정된 값:', {
+            id: $(`#${prefix}sourceObjectId`).val(),
+            type: $(`#${prefix}sourceObjectType`).val(),
+            name: $(`#${prefix}sourceObjectName`).val()
+        });
+        
+        // 모달 닫기
+        $('#sourceSearchModal').modal('hide');
+    } catch (error) {
+        console.error('출발지 객체 선택 중 오류 발생:', error);
+        alert('출발지 객체 선택 중 오류가 발생했습니다. 개발자 도구의 콘솔을 확인하세요.');
+    }
 }
 
 /**
@@ -365,11 +438,38 @@ function deletePolicyWithApi(id) {
 function validateAndSubmit(formId) {
     const form = document.getElementById(formId);
     
+    console.log('폼 제출 검증 시작:', formId);
+    
+    // 출발지 객체 선택 여부 확인
+    const prefix = formId === 'addPolicyForm' ? '' : 'edit-';
+    const sourceObjectId = $(`#${prefix}sourceObjectId`).val();
+    const sourceObjectType = $(`#${prefix}sourceObjectType`).val();
+    
+    console.log('출발지 객체 정보:', {
+        id: sourceObjectId,
+        type: sourceObjectType,
+        name: $(`#${prefix}sourceObjectName`).val()
+    });
+    
+    // 출발지 객체 선택 여부 검증
+    if (!sourceObjectId || !sourceObjectType) {
+        alert('출발지 객체를 선택해주세요.');
+        return;
+    }
+    
     if (!form.checkValidity()) {
         // HTML5 기본 유효성 검사 수행
         form.reportValidity();
         return;
     }
+    
+    // 폼 데이터 로깅 (디버깅용)
+    const formData = new FormData(form);
+    const formDataObj = {};
+    formData.forEach((value, key) => {
+        formDataObj[key] = value;
+    });
+    console.log('제출할 폼 데이터:', formDataObj);
     
     // 폼 ID에 따라 처리
     if (formId === 'addPolicyForm') {
@@ -454,6 +554,9 @@ function submitPolicyForm(form, isAdd) {
                 if (isAdd) {
                     form.reset();
                     $('#serverObjectId').val('').trigger('change');
+                    $('#sourceObjectId').val('');
+                    $('#sourceObjectType').val('');
+                    $('#sourceObjectName').val('');
                 }
             } else {
                 // 실패 시 처리
