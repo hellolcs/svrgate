@@ -97,9 +97,14 @@
     <div class="container-fluid mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>정책관리</h2>
-            <button type="button" class="btn btn-primary" onclick="showAddPolicyModal()">
-                <i class="bi bi-plus-circle me-1"></i> 정책 추가
-            </button>
+            <div>
+                <button type="button" class="btn btn-outline-secondary me-2" id="toggleAllBtn" onclick="toggleAllPanels()">
+                    <i class="bi bi-arrows-expand me-1"></i> 전체 펼치기
+                </button>
+                <button type="button" class="btn btn-primary" onclick="showAddPolicyModal()">
+                    <i class="bi bi-plus-circle me-1"></i> 정책 추가
+                </button>
+            </div>
         </div>
         
         <!-- 알림 메시지 출력 -->
@@ -150,7 +155,7 @@
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td colspan="13" class="text-center">
+                                        <td colspan="14" class="text-center">
                                             <div class="spinner-border text-primary" role="status">
                                                 <span class="visually-hidden">Loading...</span>
                                             </div>
