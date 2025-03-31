@@ -6,34 +6,33 @@ import lombok.Setter;
 @Getter
 @Setter
 public class FirewallRuleRequest {
-    // 기존 중복된 'rule' 필드를 'rulePriority'와 'ruleAction'으로 분리
-    private RulePriority rulePriority;  // rule.priority 정보를 담는 객체
-    private String ruleAction;          // accept/reject 값
-    private FirewallIp ip;
-    private FirewallPort port;
+    private RuleInfo rule;     // rule.priority 정보를 담는 객체
+    private IpInfo ip;
+    private PortInfo port;
     private String protocol;
     private Boolean log;
     private Boolean useTimeout;
     private Integer timeout;
     private String description;
+    private String action;     // 'accept' 또는 'reject' 값
     
     @Getter
     @Setter
-    public static class RulePriority {
+    public static class RuleInfo {
         private Integer priority;
     }
     
     @Getter
     @Setter
-    public static class FirewallIp {
+    public static class IpInfo {
         private String ipv4Ip;
         private Integer bit;
     }
     
     @Getter
     @Setter
-    public static class FirewallPort {
+    public static class PortInfo {
         private String mode;
-        private String port;  // "123" 또는 "123-456" 형식
+        private Object port;  // 단일 포트 또는 포트 범위 문자열
     }
 }

@@ -21,11 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 방화벽 API를 호출하기 위한 클라이언트 서비스
@@ -212,18 +209,21 @@ public class FirewallApiClientService {
     private FirewallRuleRequest createAddPolicyRequest(PolicyDto policyDto) {
         FirewallRuleRequest request = new FirewallRuleRequest();
         
-        // rule.priority
+        // rule.priority 설정
         FirewallRuleRequest.RuleInfo ruleInfo = new FirewallRuleRequest.RuleInfo();
         ruleInfo.setPriority(policyDto.getPriority());
         request.setRule(ruleInfo);
         
-        // ip 정보
+        // action 설정 (accept/reject)
+        request.setAction(policyDto.getAction());
+        
+        // ip 정보 설정
         FirewallRuleRequest.IpInfo ipInfo = new FirewallRuleRequest.IpInfo();
         ipInfo.setIpv4Ip(getSourceObjectIpAddress(policyDto.getSourceObjectId(), policyDto.getSourceObjectType()));
         ipInfo.setBit(getSourceObjectNetmaskBit(policyDto.getSourceObjectId(), policyDto.getSourceObjectType()));
         request.setIp(ipInfo);
         
-        // port 정보
+        // port 정보 설정
         FirewallRuleRequest.PortInfo portInfo = new FirewallRuleRequest.PortInfo();
         portInfo.setMode(policyDto.getPortMode());
         if ("single".equals(policyDto.getPortMode())) {
@@ -233,16 +233,13 @@ public class FirewallApiClientService {
         }
         request.setPort(portInfo);
         
-        // protocol
+        // protocol 설정
         request.setProtocol(policyDto.getProtocol());
         
-        // rule (action)
-        request.setRule(policyDto.getAction());
-        
-        // log
+        // log 설정
         request.setLog(policyDto.getLogging());
         
-        // timeout 관련
+        // timeout 관련 설정
         boolean useTimeout = policyDto.getTimeLimit() != null && policyDto.getTimeLimit() > 0;
         request.setUseTimeout(useTimeout);
         if (useTimeout) {
@@ -250,7 +247,7 @@ public class FirewallApiClientService {
             request.setTimeout(policyDto.getTimeLimit() * 3600);
         }
         
-        // description
+        // description 설정
         request.setDescription(policyDto.getDescription());
         
         return request;
@@ -281,8 +278,8 @@ public class FirewallApiClientService {
         // protocol
         request.setProtocol(policyDto.getProtocol());
         
-        // rule (action)
-        request.setRule(policyDto.getAction());
+        // action 설정 (accept/reject)
+        request.setAction(policyDto.getAction());
         
         return request;
     }
