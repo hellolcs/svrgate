@@ -49,7 +49,7 @@ public class FirewallApiClientService {
             log.info("방화벽 정책 추가 API 호출: 서버={}, 정책 우선순위={}", server.getName(), policyDto.getPriority());
             
             // API 엔드포인트 URL 구성 - API 정의서에 맞게 수정
-            String apiUrl = String.format("https://%s:3000/api/v1/firewall/rules", server.getIpAddress());
+            String apiUrl = String.format("http://%s:3000/api/v1/firewall/rules", server.getIpAddress());
             
             // 요청 헤더 구성
             HttpHeaders headers = new HttpHeaders();
@@ -122,7 +122,7 @@ public class FirewallApiClientService {
             PolicyDto policyDto = getPolicyById(policyId);
             
             // API 엔드포인트 URL 구성
-            String apiUrl = String.format("https://%s:3000/api/v1/firewall/rules", server.getIpAddress());
+            String apiUrl = String.format("http://%s:3000/api/v1/firewall/rules", server.getIpAddress());
             
             // 요청 헤더 구성
             HttpHeaders headers = new HttpHeaders();
