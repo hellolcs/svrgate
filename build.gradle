@@ -29,8 +29,11 @@ dependencies {
     implementation 'nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect:3.1.0'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
-    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
-    implementation 'org.apache.httpcomponents.core5:httpcore5:5.2.1'
+    
+    // HTTP Client 관련 의존성 제거하고 기본 RestTemplate 사용
+    // implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
+    // implementation 'org.apache.httpcomponents.core5:httpcore5:5.2.1'
+    
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.junit.jupiter:junit-jupiter'

@@ -16,13 +16,11 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
-
 
 /**
  * 방화벽 API를 호출하기 위한 클라이언트 서비스
@@ -35,7 +33,6 @@ public class FirewallApiClientService {
 
     private final Logger log = LoggerFactory.getLogger(FirewallApiClientService.class);
     private final RestTemplate restTemplate;
-    private final RetryTemplate retryTemplate;
     private final ServerObjectRepository serverObjectRepository;
     private final GeneralObjectRepository generalObjectRepository;
     private final NetworkObjectRepository networkObjectRepository;
@@ -50,51 +47,49 @@ public class FirewallApiClientService {
      */
     public FirewallApiResponse addPolicy(ServerObject server, PolicyDto policyDto) throws FirewallApiException {
         try {
-            return retryTemplate.execute(context -> {
-                log.info("방화벽 정책 추가 API 호출: 서버={}, 정책 우선순위={}", server.getName(), policyDto.getPriority());
+            log.info("방화벽 정책 추가 API 호출: 서버={}, 정책 우선순위={}", server.getName(), policyDto.getPriority());
+            
+            // API 엔드포인트 URL 구성 - HTTP로 변경
+            String apiUrl = String.format("http://%s/api/v1/firewall/rules", server.getIpAddress());
+            
+            // 요청 헤더 구성
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Content-Type", "application/json");
+            headers.set("X-API-Key", server.getApiKey()); // API 키를 헤더에 추가
+            
+            // 요청 바디 구성
+            FirewallRuleRequest requestBody = createAddPolicyRequest(policyDto);
+            
+            // HTTP 요청 엔티티 생성
+            HttpEntity<FirewallRuleRequest> requestEntity = new HttpEntity<>(requestBody, headers);
+            
+            // API 호출
+            ResponseEntity<FirewallRuleResponse> response = restTemplate.exchange(
+                apiUrl, 
+                HttpMethod.POST, 
+                requestEntity, 
+                FirewallRuleResponse.class
+            );
+            
+            // 응답 처리
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                FirewallRuleResponse responseBody = response.getBody();
+                boolean success = responseBody.getSuccess();
+                String code = responseBody.getCode();
+                String message = responseBody.getMessage();
                 
-                // API 엔드포인트 URL 구성 - API 정의서에 맞게 수정
-                String apiUrl = String.format("https://%s/api/v1/firewall/rules", server.getIpAddress());
+                log.info("방화벽 정책 추가 API 응답: 성공={}, 코드={}, 메시지={}", success, code, message);
                 
-                // 요청 헤더 구성
-                HttpHeaders headers = new HttpHeaders();
-                headers.set("Content-Type", "application/json");
-                headers.set("X-API-Key", server.getApiKey()); // API 키를 헤더에 추가
-                
-                // 요청 바디 구성 - API 정의서에 맞게 변경
-                FirewallRuleRequest requestBody = createAddPolicyRequest(policyDto);
-                
-                // HTTP 요청 엔티티 생성
-                HttpEntity<FirewallRuleRequest> requestEntity = new HttpEntity<>(requestBody, headers);
-                
-                // API 호출
-                ResponseEntity<FirewallRuleResponse> response = restTemplate.exchange(
-                    apiUrl, 
-                    HttpMethod.POST, 
-                    requestEntity, 
-                    FirewallRuleResponse.class
-                );
-                
-                // 응답 처리 - API 정의서에 맞게 수정
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    FirewallRuleResponse responseBody = response.getBody();
-                    boolean success = responseBody.getSuccess();
-                    String code = responseBody.getCode();
-                    String message = responseBody.getMessage();
-                    
-                    log.info("방화벽 정책 추가 API 응답: 성공={}, 코드={}, 메시지={}", success, code, message);
-                    
-                    if (success && policyDto.getTimeLimit() != null && policyDto.getTimeLimit() > 0 
-                            && responseBody.getData() != null && responseBody.getData().getExpiresAt() != null) {
-                        log.info("정책 만료 시간: {}", responseBody.getData().getExpiresAt());
-                    }
-                    
-                    return new FirewallApiResponse(success, message);
-                } else {
-                    log.warn("방화벽 정책 추가 API 응답 실패: 상태 코드={}", response.getStatusCode());
-                    return new FirewallApiResponse(false, "방화벽 정책 추가에 실패했습니다. 상태 코드: " + response.getStatusCode());
+                if (success && policyDto.getTimeLimit() != null && policyDto.getTimeLimit() > 0 
+                        && responseBody.getData() != null && responseBody.getData().getExpiresAt() != null) {
+                    log.info("정책 만료 시간: {}", responseBody.getData().getExpiresAt());
                 }
-            });
+                
+                return new FirewallApiResponse(success, message);
+            } else {
+                log.warn("방화벽 정책 추가 API 응답 실패: 상태 코드={}", response.getStatusCode());
+                return new FirewallApiResponse(false, "방화벽 정책 추가에 실패했습니다. 상태 코드: " + response.getStatusCode());
+            }
         } catch (Exception e) {
             handleApiException(e, "방화벽 정책 추가");
             throw new FirewallApiException("방화벽 정책 추가 API 호출 중 오류가 발생했습니다: " + e.getMessage(), e);
@@ -111,52 +106,50 @@ public class FirewallApiClientService {
      */
     public FirewallApiResponse deletePolicy(ServerObject server, Long policyId) throws FirewallApiException {
         try {
-            return retryTemplate.execute(context -> {
-                log.info("방화벽 정책 삭제 API 호출: 서버={}, 정책 ID={}", server.getName(), policyId);
+            log.info("방화벽 정책 삭제 API 호출: 서버={}, 정책 ID={}", server.getName(), policyId);
+            
+            // ID로 정책 조회 - 실제로는 이 부분이 구현되어야 함
+            PolicyDto policyDto = getPolicyById(policyId);
+            
+            // API 엔드포인트 URL 구성 - HTTP로 변경
+            String apiUrl = String.format("http://%s/api/v1/firewall/rules", server.getIpAddress());
+            
+            // 요청 헤더 구성
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Content-Type", "application/json");
+            headers.set("X-API-Key", server.getApiKey()); // API 키를 헤더에 추가
+            
+            // 요청 바디 구성
+            FirewallRuleRequest requestBody = createDeletePolicyRequest(policyDto);
+            
+            // HTTP 요청 엔티티 생성
+            HttpEntity<FirewallRuleRequest> requestEntity = new HttpEntity<>(requestBody, headers);
+            
+            // API 호출
+            ResponseEntity<FirewallRuleResponse> response = restTemplate.exchange(
+                apiUrl, 
+                HttpMethod.DELETE, 
+                requestEntity, 
+                FirewallRuleResponse.class
+            );
+            
+            // 응답 처리
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                FirewallRuleResponse responseBody = response.getBody();
+                boolean success = responseBody.getSuccess();
+                String code = responseBody.getCode();
+                String message = responseBody.getMessage();
                 
-                // ID로 정책 조회 - 실제로는 이 부분이 구현되어야 함
-                PolicyDto policyDto = getPolicyById(policyId);
-                
-                // API 엔드포인트 URL 구성
-                String apiUrl = String.format("https://%s/api/v1/firewall/rules", server.getIpAddress());
-                
-                // 요청 헤더 구성
-                HttpHeaders headers = new HttpHeaders();
-                headers.set("Content-Type", "application/json");
-                headers.set("X-API-Key", server.getApiKey()); // API 키를 헤더에 추가
-                
-                // 요청 바디 구성 - API 정의서에 맞게 변경
-                FirewallRuleRequest requestBody = createDeletePolicyRequest(policyDto);
-                
-                // HTTP 요청 엔티티 생성
-                HttpEntity<FirewallRuleRequest> requestEntity = new HttpEntity<>(requestBody, headers);
-                
-                // API 호출
-                ResponseEntity<FirewallRuleResponse> response = restTemplate.exchange(
-                    apiUrl, 
-                    HttpMethod.DELETE, 
-                    requestEntity, 
-                    FirewallRuleResponse.class
-                );
-                
-                // 응답 처리 - API 정의서에 맞게 수정
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    FirewallRuleResponse responseBody = response.getBody();
-                    boolean success = responseBody.getSuccess();
-                    String code = responseBody.getCode();
-                    String message = responseBody.getMessage();
-                    
-                    log.info("방화벽 정책 삭제 API 응답: 성공={}, 코드={}, 메시지={}", success, code, message);
-                    if (success && responseBody.getData() != null && responseBody.getData().getDeletedAt() != null) {
-                        log.info("정책 삭제 시간: {}", responseBody.getData().getDeletedAt());
-                    }
-                    
-                    return new FirewallApiResponse(success, message);
-                } else {
-                    log.warn("방화벽 정책 삭제 API 응답 실패: 상태 코드={}", response.getStatusCode());
-                    return new FirewallApiResponse(false, "방화벽 정책 삭제에 실패했습니다. 상태 코드: " + response.getStatusCode());
+                log.info("방화벽 정책 삭제 API 응답: 성공={}, 코드={}, 메시지={}", success, code, message);
+                if (success && responseBody.getData() != null && responseBody.getData().getDeletedAt() != null) {
+                    log.info("정책 삭제 시간: {}", responseBody.getData().getDeletedAt());
                 }
-            });
+                
+                return new FirewallApiResponse(success, message);
+            } else {
+                log.warn("방화벽 정책 삭제 API 응답 실패: 상태 코드={}", response.getStatusCode());
+                return new FirewallApiResponse(false, "방화벽 정책 삭제에 실패했습니다. 상태 코드: " + response.getStatusCode());
+            }
         } catch (Exception e) {
             handleApiException(e, "방화벽 정책 삭제");
             throw new FirewallApiException("방화벽 정책 삭제 API 호출 중 오류가 발생했습니다: " + e.getMessage(), e);
