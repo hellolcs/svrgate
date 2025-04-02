@@ -4,6 +4,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * 방화벽 정책 API 요청 DTO
+ * 방화벽 관리 Agent API 정의서에 맞게 정의됨
+ */
 @Getter
 @Setter
 public class FirewallRuleRequest {
@@ -19,7 +23,10 @@ public class FirewallRuleRequest {
     
     private Integer timeout;
     private String description;
-    private String action;     // 'accept' 또는 'reject' 값
+    
+    // action 대신 rule_type으로 내부 필드명 변경하고, JSON 변환 시 "rule"로 출력
+    @JsonProperty("rule")
+    private String ruleType;     // 'accept' 또는 'reject' 값
     
     @Getter
     @Setter
@@ -30,6 +37,7 @@ public class FirewallRuleRequest {
     @Getter
     @Setter
     public static class IpInfo {
+        @JsonProperty("ipv4_ip")
         private String ipv4Ip;
         private Integer bit;
     }
