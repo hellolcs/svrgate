@@ -228,31 +228,31 @@ public class PolicyService {
      * @throws PolicyOperationException 정책 생성 중 오류 발생 시
      */
     @Transactional
-    public PolicyOperationResult createPolicy(PolicyDto policyDto, String ipAddress) throws PolicyOperationException {
+    public PolicyOperationResult createPolicy(PolicyDto policyDto, String ipAddress) {
         // 현재 로그인한 사용자 정보 가져오기
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-
+    
         // 등록자 이름 조회 (username -> name)
         String registrarName = accountRepository.findByUsername(username)
                 .map(Account::getName)
                 .orElse(username);
-
+    
         // 등록자 정보 설정 (이름으로 설정)
         policyDto.setRegistrar(registrarName);
-
+    
         // 서버 존재 여부 확인
         ServerObject serverObject = serverObjectRepository.findById(policyDto.getServerObjectId())
                 .orElseThrow(() -> new IllegalArgumentException("서버를 찾을 수 없습니다: " + policyDto.getServerObjectId()));
-
+    
         // 서버가 활성화 상태인지 확인
         if (!serverObject.isActive()) {
             throw new IllegalArgumentException("비활성화된 서버에는 정책을 추가할 수 없습니다: " + serverObject.getName());
         }
-
+    
         // 출발지 객체 존재 여부 확인
         validateSourceObject(policyDto.getSourceObjectId(), policyDto.getSourceObjectType());
-
+    
         // 포트 범위 유효성 검사 (Multi 모드인 경우)
         if ("multi".equals(policyDto.getPortMode()) &&
                 policyDto.getEndPort() != null &&
@@ -260,7 +260,7 @@ public class PolicyService {
                 policyDto.getEndPort() <= policyDto.getStartPort()) {
             throw new IllegalArgumentException("종료 포트는 시작 포트보다 커야 합니다.");
         }
-
+    
         try {
             // 방화벽 API 호출하여 정책 추가
             FirewallApiResponse apiResponse = firewallApiClient.addPolicy(serverObject, policyDto);
@@ -285,10 +285,10 @@ public class PolicyService {
             Policy policy = convertToEntity(policyDto);
             policy.setServerObject(serverObject);
             policy.setRegistrationDate(LocalDateTime.now());
-
+    
             // 정책 저장
             Policy savedPolicy = policyRepository.save(policy);
-
+    
             // 작업 로그 기록
             operationLogService.logOperation(
                     username,
@@ -297,24 +297,24 @@ public class PolicyService {
                     "정책 ID: " + savedPolicy.getId() + ", 서버: " + serverObject.getName(),
                     "정책관리",
                     "정책 생성");
-
+    
             return new PolicyOperationResult(true, "정책이 성공적으로 추가되었습니다.", convertToDto(savedPolicy));
-            
-        } catch (FirewallApiException e) {
-            log.error("방화벽 API 호출 중 오류 발생: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("정책 생성 중 오류 발생: {}", e.getMessage(), e);
             
             // 작업 로그 기록 (실패)
             operationLogService.logOperation(
                     username,
                     ipAddress,
                     false,
-                    "방화벽 API 오류: " + e.getMessage() + ", 서버: " + serverObject.getName(),
+                    "오류: " + e.getMessage() + ", 서버: " + serverObject.getName(),
                     "정책관리",
                     "정책 생성 실패");
             
-            throw new PolicyOperationException("방화벽 API 오류: " + e.getMessage(), e);
+            return new PolicyOperationResult(false, "정책 생성 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
+
     /**
      * 정책 수정 - 요청자와 설명만 수정 가능 (기존 로직 유지)
      */
@@ -359,24 +359,24 @@ public class PolicyService {
      * @throws PolicyOperationException 정책 삭제 중 오류 발생 시
      */
     @Transactional
-    public PolicyOperationResult deletePolicy(Long id, String ipAddress) throws PolicyOperationException {
+    public PolicyOperationResult deletePolicy(Long id, String ipAddress) {
         // 현재 로그인한 사용자 정보 가져오기
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-
+    
         // 정책 존재 여부 확인
         Policy policy = policyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("정책을 찾을 수 없습니다: " + id));
-
+    
         // 서버 객체 확인
         ServerObject serverObject = policy.getServerObject();
         if (serverObject == null) {
             throw new IllegalStateException("정책에 연결된 서버 객체가 없습니다.");
         }
-
+    
         // 서버 이름 저장 (로깅용)
         String serverName = serverObject.getName();
-
+    
         try {
             // 방화벽 API 호출하여 정책 삭제
             FirewallApiResponse apiResponse = firewallApiClient.deletePolicy(serverObject, id);
@@ -399,7 +399,7 @@ public class PolicyService {
             
             // 정책 삭제
             policyRepository.delete(policy);
-
+    
             // 작업 로그 기록
             operationLogService.logOperation(
                     username,
@@ -408,22 +408,21 @@ public class PolicyService {
                     "정책 ID: " + id + ", 서버: " + serverName,
                     "정책관리",
                     "정책 삭제");
-
+    
             return new PolicyOperationResult(true, "정책이 성공적으로 삭제되었습니다.");
-            
-        } catch (FirewallApiException e) {
-            log.error("방화벽 API 호출 중 오류 발생: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("정책 삭제 중 오류 발생: {}", e.getMessage(), e);
             
             // 작업 로그 기록 (실패)
             operationLogService.logOperation(
                     username,
                     ipAddress,
                     false,
-                    "방화벽 API 오류: " + e.getMessage() + ", 정책 ID: " + id + ", 서버: " + serverName,
+                    "오류: " + e.getMessage() + ", 정책 ID: " + id + ", 서버: " + serverName,
                     "정책관리",
                     "정책 삭제 실패");
             
-            throw new PolicyOperationException("방화벽 API 오류: " + e.getMessage(), e);
+            return new PolicyOperationResult(false, "정책 삭제 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
 
