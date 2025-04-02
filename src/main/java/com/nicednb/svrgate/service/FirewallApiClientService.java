@@ -222,21 +222,20 @@ public class FirewallApiClientService {
     private FirewallRuleRequest createAddPolicyRequest(PolicyDto policyDto) {
         FirewallRuleRequest request = new FirewallRuleRequest();
 
-        // rule.priority 설정
+        // rule.priority 설정 (필드명 변경: rule -> ruleInfo)
         FirewallRuleRequest.RuleInfo ruleInfo = new FirewallRuleRequest.RuleInfo();
         ruleInfo.setPriority(policyDto.getPriority());
-        request.setRule(ruleInfo);
+        request.setRuleInfo(ruleInfo);
 
-        // rule 설정 (accept/reject) - API 문서에 맞게 변경
+        // rule 설정 (accept/reject)
         request.setRuleType(policyDto.getAction());
 
-        // ip 정보 설정
+        // 나머지 코드는 동일...
         FirewallRuleRequest.IpInfo ipInfo = new FirewallRuleRequest.IpInfo();
         ipInfo.setIpv4Ip(getSourceObjectIpAddress(policyDto.getSourceObjectId(), policyDto.getSourceObjectType()));
         ipInfo.setBit(getSourceObjectNetmaskBit(policyDto.getSourceObjectId(), policyDto.getSourceObjectType()));
         request.setIp(ipInfo);
 
-        // port 정보 설정
         FirewallRuleRequest.PortInfo portInfo = new FirewallRuleRequest.PortInfo();
         portInfo.setMode(policyDto.getPortMode());
         if ("single".equals(policyDto.getPortMode())) {
@@ -246,21 +245,15 @@ public class FirewallApiClientService {
         }
         request.setPort(portInfo);
 
-        // protocol 설정
         request.setProtocol(policyDto.getProtocol());
-
-        // log 설정
         request.setLog(policyDto.getLogging());
 
-        // timeout 관련 설정
         boolean useTimeout = policyDto.getTimeLimit() != null && policyDto.getTimeLimit() > 0;
         request.setUseTimeout(useTimeout);
         if (useTimeout) {
-            // timeLimit은 시간(h) 단위, API는 초(s) 단위로 가정
             request.setTimeout(policyDto.getTimeLimit() * 3600);
         }
 
-        // description 설정
         request.setDescription(policyDto.getDescription());
 
         return request;
@@ -294,7 +287,7 @@ public class FirewallApiClientService {
         // protocol
         request.setProtocol(policyDto.getProtocol());
 
-        // rule 설정 (accept/reject) - action 대신 API 문서에 맞게 rule 사용
+        // rule 설정 (accept/reject)
         request.setRuleType(policyDto.getAction());
 
         return request;

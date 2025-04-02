@@ -11,20 +11,20 @@ import lombok.Setter;
 @Getter
 @Setter
 public class FirewallRuleRequest {
-    private RuleInfo rule;     // rule.priority 정보를 담는 객체
+    // 필드명 변경: rule -> ruleInfo (JSON 변환 시 이름 변경하지 않음)
+    private RuleInfo ruleInfo;
     private IpInfo ip;
     private PortInfo port;
     private String protocol;
     private Boolean log;
     
-    // JSON 필드명 변경
     @JsonProperty("use_timeout")
     private Boolean useTimeout;
     
     private Integer timeout;
     private String description;
     
-    // action 대신 rule_type으로 내부 필드명 변경하고, JSON 변환 시 "rule"로 출력
+    // JSON 변환 시 "rule"로 출력
     @JsonProperty("rule")
     private String ruleType;     // 'accept' 또는 'reject' 값
     
