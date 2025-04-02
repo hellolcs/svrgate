@@ -50,7 +50,7 @@ X-API-Key: {api-key}
 
 ### 3.2 엔드포인트
 ```
-POST /api/v1/firewall/rules
+POST /api/v1/firewall/rules/add
 ```
 
 ### 3.3 요청 파라미터
@@ -156,7 +156,7 @@ POST /api/v1/firewall/rules
 
 ### 4.2 엔드포인트
 ```
-DELETE /api/v1/firewall/rules
+POST /api/v1/firewall/rules/delete
 ```
 
 ### 4.3 요청 파라미터
@@ -333,7 +333,7 @@ X-API-Key: your-api-key-here
 
 **요청:**
 ```
-POST /api/v1/firewall/rules
+POST /api/v1/firewall/rules/add
 X-API-Key: your-api-key-here
 Content-Type: application/json
 
@@ -375,7 +375,7 @@ Content-Type: application/json
 
 **요청:**
 ```
-POST /api/v1/firewall/rules
+POST /api/v1/firewall/rules/add
 X-API-Key: your-api-key-here
 Content-Type: application/json
 
@@ -415,7 +415,7 @@ Content-Type: application/json
 
 **요청:**
 ```
-DELETE /api/v1/firewall/rules
+POST /api/v1/firewall/rules/delete
 X-API-Key: your-api-key-here
 Content-Type: application/json
 

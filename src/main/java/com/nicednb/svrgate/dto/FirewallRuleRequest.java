@@ -1,5 +1,6 @@
 package com.nicednb.svrgate.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,7 +12,11 @@ public class FirewallRuleRequest {
     private PortInfo port;
     private String protocol;
     private Boolean log;
+    
+    // JSON 필드명 변경
+    @JsonProperty("use_timeout")
     private Boolean useTimeout;
+    
     private Integer timeout;
     private String description;
     private String action;     // 'accept' 또는 'reject' 값

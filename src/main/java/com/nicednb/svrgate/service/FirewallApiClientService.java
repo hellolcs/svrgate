@@ -50,7 +50,7 @@ public class FirewallApiClientService {
             log.info("방화벽 정책 추가 API 호출: 서버={}, 정책 우선순위={}", server.getName(), policyDto.getPriority());
             
             // API 엔드포인트 URL 구성 - HTTP로 변경
-            String apiUrl = String.format("http://%s:3000/api/v1/firewall/rules", server.getIpAddress());
+            String apiUrl = String.format("http://%s:3000/api/v1/firewall/rules/add", server.getIpAddress());
             
             log.debug("호출 URL: {}", apiUrl);
             
@@ -67,22 +67,36 @@ public class FirewallApiClientService {
             // HTTP 요청 엔티티 생성
             HttpEntity<FirewallRuleRequest> requestEntity = new HttpEntity<>(requestBody, headers);
             
-            // API 호출 - 응답 타입을 String으로 변경 (디버깅용)
-            ResponseEntity<String> response = restTemplate.exchange(
-                apiUrl, 
-                HttpMethod.POST, 
-                requestEntity, 
-                String.class
-            );
-            
-            log.debug("API 응답 상태 코드: {}", response.getStatusCode());
-            log.debug("API 응답 본문: {}", response.getBody());
-            
-            // 성공 응답 반환 (실제로는 응답 내용을 파싱해야 함)
-            return new FirewallApiResponse(true, "방화벽 정책 추가에 성공했습니다.");
+            try {
+                // API 호출 - 응답 타입을 String으로 변경 (디버깅용)
+                ResponseEntity<String> response = restTemplate.exchange(
+                    apiUrl, 
+                    HttpMethod.POST, 
+                    requestEntity, 
+                    String.class
+                );
+                
+                log.debug("API 응답 상태 코드: {}", response.getStatusCode());
+                log.debug("API 응답 본문: {}", response.getBody());
+                
+                // 성공 응답 반환 (실제로는 응답 내용을 파싱해야 함)
+                return new FirewallApiResponse(true, "방화벽 정책 추가에 성공했습니다.");
+            } catch (HttpClientErrorException.NotFound e) {
+                // 404 에러 처리 - 에러로 처리하지 않고 결과만 반환
+                log.warn("방화벽 API 엔드포인트를 찾을 수 없습니다 (404): {}", apiUrl);
+                log.debug("404 응답 본문: {}", e.getResponseBodyAsString());
+                
+                // 결과 반환 (404이지만 실패로만 처리하고 예외는 발생시키지 않음)
+                return new FirewallApiResponse(
+                    false, 
+                    "API 엔드포인트를 찾을 수 없습니다. (404 Not Found) 방화벽 서버가 실행 중인지 확인하세요."
+                );
+            }
         } catch (Exception e) {
             handleApiException(e, "방화벽 정책 추가");
-            throw new FirewallApiException("방화벽 정책 추가 API 호출 중 오류가 발생했습니다: " + e.getMessage(), e);
+            
+            // 예외를 발생시키지 않고 실패 응답으로 처리
+            return new FirewallApiResponse(false, "방화벽 정책 추가 API 호출 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
 
@@ -94,7 +108,7 @@ public class FirewallApiClientService {
      * @return API 호출 결과
      * @throws FirewallApiException API 호출 중 오류 발생 시
      */
-    public FirewallApiResponse deletePolicy(ServerObject server, Long policyId) throws FirewallApiException {
+    public FirewallApiResponse deletePolicy(ServerObject server, Long policyId) {
         try {
             log.info("방화벽 정책 삭제 API 호출: 서버={}, 정책 ID={}", server.getName(), policyId);
             
@@ -102,7 +116,7 @@ public class FirewallApiClientService {
             PolicyDto policyDto = getPolicyById(policyId);
             
             // API 엔드포인트 URL 구성 - HTTP로 변경
-            String apiUrl = String.format("http://%s:3000/api/v1/firewall/rules", server.getIpAddress());
+            String apiUrl = String.format("http://%s:3000/api/v1/firewall/rules/delete", server.getIpAddress());
             
             log.debug("호출 URL: {}", apiUrl);
             
@@ -119,23 +133,36 @@ public class FirewallApiClientService {
             // HTTP 요청 엔티티 생성
             HttpEntity<FirewallRuleRequest> requestEntity = new HttpEntity<>(requestBody, headers);
             
-            // API 호출 - 응답 타입을 String으로 변경 (디버깅용)
-            ResponseEntity<String> response = restTemplate.exchange(
-                apiUrl, 
-                HttpMethod.DELETE, 
-                requestEntity, 
-                String.class
-            );
-            
-            log.debug("API 응답 상태 코드: {}", response.getStatusCode());
-            log.debug("API 응답 본문: {}", response.getBody());
-            
-            // 성공 응답 반환 (실제로는 응답 내용을 파싱해야 함)
-            return new FirewallApiResponse(true, "방화벽 정책 삭제에 성공했습니다.");
-            
+            try {
+                // API 호출 - 응답 타입을 String으로 변경 (디버깅용)
+                ResponseEntity<String> response = restTemplate.exchange(
+                    apiUrl, 
+                    HttpMethod.POST, 
+                    requestEntity, 
+                    String.class
+                );
+                
+                log.debug("API 응답 상태 코드: {}", response.getStatusCode());
+                log.debug("API 응답 본문: {}", response.getBody());
+                
+                // 성공 응답 반환 (실제로는 응답 내용을 파싱해야 함)
+                return new FirewallApiResponse(true, "방화벽 정책 삭제에 성공했습니다.");
+            } catch (HttpClientErrorException.NotFound e) {
+                // 404 에러 처리 - 에러로 처리하지 않고 결과만 반환
+                log.warn("방화벽 API 엔드포인트를 찾을 수 없습니다 (404): {}", apiUrl);
+                log.debug("404 응답 본문: {}", e.getResponseBodyAsString());
+                
+                // 결과 반환 (404이지만 실패로만 처리하고 예외는 발생시키지 않음)
+                return new FirewallApiResponse(
+                    false, 
+                    "API 엔드포인트를 찾을 수 없습니다. (404 Not Found) 방화벽 서버가 실행 중인지 확인하세요."
+                );
+            }
         } catch (Exception e) {
             handleApiException(e, "방화벽 정책 삭제");
-            throw new FirewallApiException("방화벽 정책 삭제 API 호출 중 오류가 발생했습니다: " + e.getMessage(), e);
+            
+            // 예외를 발생시키지 않고 실패 응답으로 처리
+            return new FirewallApiResponse(false, "방화벽 정책 삭제 API 호출 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
     
