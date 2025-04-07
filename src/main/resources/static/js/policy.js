@@ -165,7 +165,8 @@ function initializeSelect2() {
 }
 
 /**
- * 서버 패널 토글 (펼치기/접기)
+ * 서버 패널 토글
+ * @param {HTMLElement} headerElement 패널 헤더 요소
  */
 function toggleServerPanel(header) {
     const panel = $(header).closest('.server-panel');
@@ -188,12 +189,16 @@ function toggleServerPanel(header) {
     const policyTable = $(`#policy-table-${serverId}`);
     const tbody = policyTable.find('tbody');
     
-    // 이미 로드된 정책이 있으면 다시 로드하지 않음
-    if (currentPolicies[serverId]) {
-        renderPolicyTable(tbody, currentPolicies[serverId]);
-        return;
-    }
-    
+    // 항상 최신 데이터를 로드하도록 수정
+    loadServerPolicies(serverId, tbody);
+}
+
+/**
+ * 서버별 정책 목록 로드
+ * @param {number} serverId 서버 ID
+ * @param {jQuery} tbody 테이블 본문 요소
+ */
+function loadServerPolicies(serverId, tbody) {
     // 로딩 표시
     tbody.html('<tr><td colspan="14" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div>정책 로드 중...</div></td></tr>');
     
@@ -493,16 +498,11 @@ function deletePolicyWithApi(id) {
                 // 성공 시 처리
                 alert(response.message);
                 
-                // 해당 서버의 정책 캐시 초기화
-                for (const serverId in currentPolicies) {
-                    currentPolicies[serverId] = currentPolicies[serverId].filter(policy => policy.id !== id);
-                }
-                
-                // 현재 펼쳐진 패널 갱신
+                // 현재 펼쳐진 패널 갱신 - 항상 서버에서 최신 데이터를 로드하도록 수정
                 $('.server-panel.expanded').each(function() {
                     const serverId = $(this).data('server-id');
                     const tbody = $(`#policy-table-${serverId}`).find('tbody');
-                    renderPolicyTable(tbody, currentPolicies[serverId]);
+                    loadServerPolicies(serverId, tbody);
                 });
             } else {
                 // 실패 시 처리
@@ -552,6 +552,17 @@ function validateAndSubmit(formId) {
         // HTML5 기본 유효성 검사 수행
         form.reportValidity();
         return;
+    }
+    
+    // 포트 범위 검증 (multi 모드에서 종료 포트가 시작 포트보다 큰지 확인)
+    if ($(`#${prefix}portMode`).val() === 'multi') {
+        const startPort = parseInt($(`#${prefix}startPort`).val());
+        const endPort = parseInt($(`#${prefix}endPort`).val());
+        
+        if (endPort <= startPort) {
+            alert('종료 포트는 시작 포트보다 커야 합니다.');
+            return;
+        }
     }
     
     // 폼 데이터 로깅 (디버깅용)
@@ -614,28 +625,11 @@ function submitPolicyForm(form, isAdd) {
                 // 모달 닫기
                 $(`#${isAdd ? 'add' : 'edit'}PolicyModal`).modal('hide');
                 
-                // 정책 캐시 업데이트
-                if (isAdd && response.policy) {
-                    const serverId = response.policy.serverObjectId;
-                    if (currentPolicies[serverId]) {
-                        currentPolicies[serverId].push(response.policy);
-                        currentPolicies[serverId].sort((a, b) => a.priority - b.priority);
-                    }
-                } else if (!isAdd && response.policy) {
-                    const serverId = response.policy.serverObjectId;
-                    if (currentPolicies[serverId]) {
-                        const index = currentPolicies[serverId].findIndex(p => p.id === response.policy.id);
-                        if (index !== -1) {
-                            currentPolicies[serverId][index] = response.policy;
-                        }
-                    }
-                }
-                
-                // 현재 펼쳐진 패널 갱신
+                // 현재 펼쳐진 패널 갱신 - 항상 서버에서 최신 데이터를 로드하도록 수정
                 $('.server-panel.expanded').each(function() {
                     const serverId = $(this).data('server-id');
                     const tbody = $(`#policy-table-${serverId}`).find('tbody');
-                    renderPolicyTable(tbody, currentPolicies[serverId]);
+                    loadServerPolicies(serverId, tbody);
                 });
                 
                 // 폼 초기화 (추가인 경우)
