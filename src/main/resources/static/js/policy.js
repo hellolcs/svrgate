@@ -2,10 +2,13 @@
 
 // 전역 변수 선언
 let currentPolicies = {}; // 서버별 정책 목록을 저장하는 객체
+let globalSpinnerCount = 0; // 전역 스피너 활성화 카운터
 
 // DOM이 완전히 로드된 후 실행
 document.addEventListener('DOMContentLoaded', function() {
     initializePolicy();
+    // 전역 스피너 DOM 요소 추가
+    createGlobalSpinner();
 });
 
 /**
@@ -37,6 +40,86 @@ function initializePolicy() {
     
     // 모달 이벤트 핸들러 설정
     setupModalEvents();
+    
+    // CSRF 토큰 설정을 위한 Ajax 기본 설정
+    setupAjaxDefaults();
+}
+
+/**
+ * Ajax 요청의 기본 설정
+ */
+function setupAjaxDefaults() {
+    // CSRF 토큰 가져오기
+    const csrfHeader = $("meta[name='_csrf_header']").attr("content");
+    const csrfToken = $("meta[name='_csrf']").attr("content");
+    
+    // Ajax 기본 설정
+    $.ajaxSetup({
+        beforeSend: function(xhr) {
+            if (csrfHeader && csrfToken) {
+                xhr.setRequestHeader(csrfHeader, csrfToken);
+            }
+        }
+    });
+}
+
+/**
+ * 전역 스피너 DOM 요소 생성
+ */
+function createGlobalSpinner() {
+    // 스피너 컨테이너가 이미 있다면 생성하지 않음
+    if ($('#global-spinner').length > 0) return;
+    
+    const spinnerHtml = `
+    <div id="global-spinner" class="position-fixed w-100 h-100 top-0 start-0 d-none" style="z-index: 9999; background-color: rgba(0,0,0,0.4);">
+        <div class="d-flex align-items-center justify-content-center h-100">
+            <div class="bg-white p-4 rounded shadow-lg">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">처리 중...</span>
+                    </div>
+                    <h5 class="mt-3 mb-1">처리 중입니다</h5>
+                    <p class="text-muted small mb-0">잠시만 기다려주세요.</p>
+                    <p class="text-muted small mb-0" id="global-spinner-message">서버와 통신 중입니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+    
+    // body에 스피너 요소 추가
+    $('body').append(spinnerHtml);
+}
+
+/**
+ * 전역 스피너 표시
+ * @param {string} message 선택적 메시지
+ */
+function showGlobalSpinner(message) {
+    globalSpinnerCount++;
+    
+    // 메시지 설정
+    if (message) {
+        $('#global-spinner-message').text(message);
+    } else {
+        $('#global-spinner-message').text('서버와 통신 중입니다.');
+    }
+    
+    // 스피너 표시
+    $('#global-spinner').removeClass('d-none').addClass('d-flex');
+}
+
+/**
+ * 전역 스피너 숨김
+ */
+function hideGlobalSpinner() {
+    globalSpinnerCount--;
+    
+    // 여러 API 요청이 동시에 진행될 수 있으므로 카운터가 0인 경우에만 스피너 숨김
+    if (globalSpinnerCount <= 0) {
+        globalSpinnerCount = 0;
+        $('#global-spinner').removeClass('d-flex').addClass('d-none');
+    }
 }
 
 /**
@@ -177,6 +260,9 @@ function showAddPolicyModal() {
  * 정책 편집 모달 표시
  */
 function showEditPolicyModal(id) {
+    // 스피너 표시
+    showGlobalSpinner('정책 정보를 불러오는 중입니다...');
+    
     // 정책 상세 정보 가져오기
     $.ajax({
         url: `/rule/${id}`,
@@ -218,10 +304,15 @@ function showEditPolicyModal(id) {
             $('#edit-requester').val(policy.requester);
             $('#edit-description').val(policy.description);
             
+            // 스피너 숨김
+            hideGlobalSpinner();
+            
             // 모달 표시
             $('#editPolicyModal').modal('show');
         },
         error: function(xhr, status, error) {
+            // 스피너 숨김
+            hideGlobalSpinner();
             alert('정책 정보를 가져오는 중 오류가 발생했습니다: ' + error);
         }
     });
@@ -386,21 +477,18 @@ function confirmDeletePolicy(id) {
  * API를 통한 정책 삭제
  */
 function deletePolicyWithApi(id) {
-    // CSRF 토큰 가져오기
-    const csrfHeader = $("meta[name='_csrf_header']").attr("content");
-    const csrfToken = $("meta[name='_csrf']").attr("content");
+    // 스피너 표시
+    showGlobalSpinner('정책을 삭제하는 중입니다...');
     
     // API 호출 (POST 방식)
     $.ajax({
         url: '/rule/delete',
         type: 'POST',
         data: { id: id },
-        beforeSend: function(xhr) {
-            if (csrfHeader && csrfToken) {
-                xhr.setRequestHeader(csrfHeader, csrfToken);
-            }
-        },
         success: function(response) {
+            // 스피너 숨김
+            hideGlobalSpinner();
+            
             if (response.success) {
                 // 성공 시 처리
                 alert(response.message);
@@ -422,6 +510,9 @@ function deletePolicyWithApi(id) {
             }
         },
         error: function(xhr, status, error) {
+            // 스피너 숨김
+            hideGlobalSpinner();
+            
             // 에러 처리
             let errorMessage = '정책 삭제 중 오류가 발생했습니다.';
             if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -499,12 +590,11 @@ function submitPolicyForm(form, isAdd) {
     // 폼 데이터 수집
     const formData = new FormData(form);
     
-    // CSRF 토큰 가져오기
-    const csrfHeader = $("meta[name='_csrf_header']").attr("content");
-    const csrfToken = $("meta[name='_csrf']").attr("content");
-    
     // API URL 설정
     const url = isAdd ? '/rule/add' : '/rule/update';
+    
+    // 스피너 표시 (메시지 설정)
+    showGlobalSpinner(isAdd ? '정책을 추가하는 중입니다...' : '정책을 수정하는 중입니다...');
     
     // API 호출
     $.ajax({
@@ -513,12 +603,10 @@ function submitPolicyForm(form, isAdd) {
         data: formData,
         processData: false,
         contentType: false,
-        beforeSend: function(xhr) {
-            if (csrfHeader && csrfToken) {
-                xhr.setRequestHeader(csrfHeader, csrfToken);
-            }
-        },
         success: function(response) {
+            // 스피너 숨김
+            hideGlobalSpinner();
+            
             if (response.success) {
                 // 성공 시 처리
                 alert(response.message);
@@ -564,6 +652,9 @@ function submitPolicyForm(form, isAdd) {
             }
         },
         error: function(xhr, status, error) {
+            // 스피너 숨김
+            hideGlobalSpinner();
+            
             // 에러 처리
             let errorMessage = '정책 처리 중 오류가 발생했습니다.';
             if (xhr.responseJSON && xhr.responseJSON.message) {
