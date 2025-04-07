@@ -42,42 +42,4 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
         // 만료된 정책 찾기
         @Query("SELECT p FROM Policy p WHERE p.expiresAt IS NOT NULL AND p.expiresAt <= :currentTime")
         List<Policy> findExpiredPolicies(@Param("currentTime") LocalDateTime currentTime);
-
-        /**
-         * 검색 타입과 검색어로 정책 목록 조회
-         * 검색 타입에 따라 다른 필드를 검색합니다.
-         */
-        @Query("SELECT p FROM Policy p " +
-                        "WHERE (:serverId IS NULL OR p.serverObject.id = :serverId) " +
-                        "AND (" +
-                        "    (:searchType IS NULL OR :searchType = '' OR :searchType = 'all') AND (" +
-                        "        :searchText IS NULL OR :searchText = '' OR " +
-                        "        CAST(p.priority AS string) LIKE CONCAT('%', :searchText, '%') OR " +
-                        "        p.protocol LIKE CONCAT('%', :searchText, '%') OR " +
-                        "        CAST(p.startPort AS string) LIKE CONCAT('%', :searchText, '%') OR " +
-                        "        CAST(p.endPort AS string) LIKE CONCAT('%', :searchText, '%') OR " +
-                        "        p.action LIKE CONCAT('%', :searchText, '%') OR " +
-                        "        p.requester LIKE CONCAT('%', :searchText, '%') OR " +
-                        "        p.registrar LIKE CONCAT('%', :searchText, '%') OR " +
-                        "        p.description LIKE CONCAT('%', :searchText, '%') OR " +
-                        "        p.serverObject.name LIKE CONCAT('%', :searchText, '%')" +
-                        "    ) OR " +
-                        "    (:searchType = 'server' AND p.serverObject.name LIKE CONCAT('%', :searchText, '%')) OR " +
-                        "    (:searchType = 'priority' AND CAST(p.priority AS string) LIKE CONCAT('%', :searchText, '%')) OR "
-                        +
-                        "    (:searchType = 'protocol' AND p.protocol LIKE CONCAT('%', :searchText, '%')) OR " +
-                        "    (:searchType = 'port' AND (CAST(p.startPort AS string) LIKE CONCAT('%', :searchText, '%') OR CAST(p.endPort AS string) LIKE CONCAT('%', :searchText, '%'))) OR "
-                        +
-                        "    (:searchType = 'action' AND p.action LIKE CONCAT('%', :searchText, '%')) OR " +
-                        "    (:searchType = 'requester' AND p.requester LIKE CONCAT('%', :searchText, '%')) OR " +
-                        "    (:searchType = 'registrar' AND p.registrar LIKE CONCAT('%', :searchText, '%')) OR " +
-                        "    (:searchType = 'description' AND p.description LIKE CONCAT('%', :searchText, '%'))" +
-                        ") " +
-                        "ORDER BY p.serverObject.id ASC, p.priority ASC")
-        Page<Policy> searchPoliciesByType(
-                        @Param("serverId") Long serverId,
-                        @Param("searchType") String searchType,
-                        @Param("searchText") String searchText,
-                        Pageable pageable);
-                        
 }
