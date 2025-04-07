@@ -87,6 +87,23 @@ public class PolicyService {
     }
 
     /**
+     * 검색 타입 및 조건으로 정책 목록 조회
+     * 검색 타입에 따라 다른 필드를 검색합니다.
+     * 
+     * @param serverId 서버 ID (선택적)
+     * @param searchType 검색 타입 (server, priority, protocol, port, action, requester, registrar, description, all)
+     * @param searchText 검색어
+     * @param pageable 페이징 정보
+     * @return 검색 결과 페이지
+     */
+    @Transactional(readOnly = true)
+    public Page<PolicyDto> searchPoliciesByType(Long serverId, String searchType, String searchText, Pageable pageable) {
+        log.info("정책 검색: serverId={}, searchType={}, searchText={}", serverId, searchType, searchText);
+        Page<Policy> policyPage = policyRepository.searchPoliciesByType(serverId, searchType, searchText, pageable);
+        return PageConversionUtil.convertEntityPageToDtoPage(policyPage, this::convertToDto);
+    }
+    
+    /**
      * ID로 정책 조회
      */
     @Transactional(readOnly = true)

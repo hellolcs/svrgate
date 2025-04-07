@@ -11,11 +11,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,14 +37,48 @@ public class PolicyController {
      * 정책 목록 페이지
      */
     @GetMapping
-    public String policies(Model model) {
-        log.info("정책 목록 페이지 접근");
+    public String policies(Model model,
+                           @RequestParam(value = "serverId", required = false) Long serverId,
+                           @RequestParam(value = "searchType", required = false) String searchType,
+                           @RequestParam(value = "searchText", required = false) String searchText,
+                           @RequestParam(value = "page", defaultValue = "0") int page,
+                           @RequestParam(value = "size", defaultValue = "30") int size) {
+        log.info("정책 목록 페이지 접근 - 검색 조건: serverId={}, searchType={}, searchText={}", serverId, searchType, searchText);
 
         // 서버별 정책 요약 정보 조회
         List<PolicyService.ServerPolicySummary> serverPolicySummaries = policyService.getAllServerPolicySummaries();
         model.addAttribute("serverPolicySummaries", serverPolicySummaries);
+        
+        // 검색 조건 설정
+        model.addAttribute("serverId", serverId);
+        model.addAttribute("searchType", searchType);
+        model.addAttribute("searchText", searchText);
+        model.addAttribute("size", size);
+        
+        // 검색 타입 옵션 설정
+        List<Map<String, Object>> searchTypes = new ArrayList<>();
+        addSearchType(searchTypes, "all", "전체");
+        addSearchType(searchTypes, "server", "서버명");
+        addSearchType(searchTypes, "priority", "우선순위");
+        addSearchType(searchTypes, "protocol", "프로토콜");
+        addSearchType(searchTypes, "port", "포트");
+        addSearchType(searchTypes, "action", "동작");
+        addSearchType(searchTypes, "requester", "요청자");
+        addSearchType(searchTypes, "registrar", "등록자");
+        addSearchType(searchTypes, "description", "설명");
+        model.addAttribute("searchTypes", searchTypes);
 
         return "rule/list";
+    }
+
+    /**
+     * 검색 타입 옵션 추가 도우미 메소드
+     */
+    private void addSearchType(List<Map<String, Object>> list, String value, String label) {
+        Map<String, Object> option = new HashMap<>();
+        option.put("value", value);
+        option.put("label", label);
+        list.add(option);
     }
 
     /**
@@ -52,6 +90,25 @@ public class PolicyController {
         log.info("서버별 정책 목록 조회: serverId={}", serverId);
         return policyService.getPoliciesByServerId(serverId);
     }
+    
+    /**
+     * 정책 검색 결과 조회 (AJAX)
+     */
+    @GetMapping("/search")
+    @ResponseBody
+    public Page<PolicyDto> searchPolicies(
+            @RequestParam(value = "serverId", required = false) Long serverId,
+            @RequestParam(value = "searchType", required = false) String searchType,
+            @RequestParam(value = "searchText", required = false) String searchText,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "30") int size) {
+        log.info("정책 검색: serverId={}, searchType={}, searchText={}, page={}, size={}",
+                 serverId, searchType, searchText, page, size);
+        
+        Pageable pageable = PageRequest.of(page, size);
+        return policyService.searchPoliciesByType(serverId, searchType, searchText, pageable);
+    }
+
 
     /**
      * 정책 상세 조회 (AJAX)

@@ -139,6 +139,57 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         
+        <!-- 검색 및 필터링 폼 추가 -->
+        <form id="searchForm" action="/rule" method="get" class="row g-3 mb-4">
+            <!-- 서버 선택 -->
+            <div class="col-md-2">
+                <select class="form-select" name="serverId" id="filterServer">
+                    <option value="">모든 서버</option>
+                    <option th:each="server : ${serverPolicySummaries}" 
+                            th:value="${server.serverId}" 
+                            th:text="${server.serverName}"
+                            th:selected="${serverId != null && serverId == server.serverId}">
+                        서버명
+                    </option>
+                </select>
+            </div>
+            
+            <!-- 검색 타입 -->
+            <div class="col-md-2">
+                <select class="form-select" name="searchType" id="searchType">
+                    <option th:each="type : ${searchTypes}" 
+                            th:value="${type.value}" 
+                            th:text="${type.label}"
+                            th:selected="${searchType == type.value}">
+                        검색 타입
+                    </option>
+                </select>
+            </div>
+            
+            <!-- 검색어 입력 -->
+            <div class="col-md-3">
+                <input type="text" name="searchText" class="form-control" placeholder="검색어를 입력하세요" 
+                      th:value="${searchText}" minlength="2" title="최소 2글자 이상 입력해야 합니다.">
+            </div>
+            
+            <!-- 페이지 크기 선택 -->
+            <div class="col-md-1">
+                <select class="form-select" name="size">
+                    <option value="10" th:selected="${size == 10}">10</option>
+                    <option value="30" th:selected="${size == 30}">30</option>
+                    <option value="50" th:selected="${size == 50}">50</option>
+                    <option value="100" th:selected="${size == 100}">100</option>
+                </select>
+            </div>
+            
+            <!-- 검색 버튼 -->
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-dark btn-sm rounded-pill w-100" style="font-weight: bold;">
+                    검색
+                </button>
+            </div>
+        </form>
+        
         <!-- 서버별 정책 패널 -->
         <div id="server-panels-container">
             <div th:each="server : ${serverPolicySummaries}" th:data-server-id="${server.serverId}" class="card server-panel mb-3">
@@ -543,6 +594,15 @@
     <script th:src="@{/js/jquery-3.6.0.min.js}"></script>
     <script th:src="@{/js/select2.min.js}"></script>
     <script th:src="@{/js/policy.js}"></script>
+    
+    <!-- Thymeleaf 변수를 JavaScript로 전달 -->
+    <script th:inline="javascript">
+        // 검색 조건 전달
+        const initialSearchText = [[${searchText}]];
+        const initialSearchType = [[${searchType}]];
+        const initialServerId = [[${serverId}]];
+        const initialSize = [[${size}]];
+    </script>
 </div>
 </body>
 </html>
