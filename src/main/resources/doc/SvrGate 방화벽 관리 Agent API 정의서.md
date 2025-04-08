@@ -254,12 +254,6 @@ X-API-Key: your-api-key-here
 | data.rules[].port.port | String/Integer | 포트 번호 또는 범위 |
 | data.rules[].protocol | String | 프로토콜 |
 | data.rules[].rule | String | 정책 종류 |
-| data.rules[].log | Boolean | 로깅 여부 |
-| data.rules[].use_timeout | Boolean | 타임아웃 사용 여부 |
-| data.rules[].timeout | Integer | 정책 유효 시간(초), use_timeout=true인 경우에만 포함 |
-| data.rules[].description | String | 정책 설명 |
-| data.rules[].created_at | String | 정책 생성 시간 |
-| data.rules[].expires_at | String | 정책 만료 시간 (use_timeout=true인 경우에만 포함) |
 
 ### 5.6 응답 예시
 ```json
@@ -283,13 +277,7 @@ X-API-Key: your-api-key-here
           "port": "80-443"
         },
         "protocol": "tcp",
-        "rule": "accept",
-        "log": true,
-        "use_timeout": true,
-        "timeout": 3600,
-        "description": "웹 서버 접근 허용 (1시간)",
-        "created_at": "2025-03-24T09:30:45.123Z",
-        "expires_at": "2025-03-24T10:30:45.123Z"
+        "rule": "accept"
       },
       {
         "priority": 2,
@@ -302,11 +290,7 @@ X-API-Key: your-api-key-here
           "port": 22
         },
         "protocol": "tcp",
-        "rule": "accept",
-        "log": true,
-        "use_timeout": false,
-        "description": "내부망 SSH 접근 허용 (영구)",
-        "created_at": "2025-03-23T14:20:15.789Z"
+        "rule": "accept"
       }
       // 추가 정책 생략...
     ]
