@@ -1,5 +1,7 @@
 package com.nicednb.svrgate.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nicednb.svrgate.dto.FirewallRuleRequest;
 import com.nicednb.svrgate.dto.FirewallRuleResponse;
 import com.nicednb.svrgate.dto.PolicyDto;
@@ -34,10 +36,21 @@ public class FirewallApiClientService {
 
     private final Logger log = LoggerFactory.getLogger(FirewallApiClientService.class);
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
     private final ServerObjectRepository serverObjectRepository;
     private final GeneralObjectRepository generalObjectRepository;
     private final NetworkObjectRepository networkObjectRepository;
-    private final PolicyRepository policyRepository; // 정책 저장소 추가
+    private final PolicyRepository policyRepository;
+
+    // API 응답 코드 상수 정의
+    public static final String CODE_SUCCESS = "SUCCESS";
+    public static final String CODE_INVALID_REQUEST = "INVALID_REQUEST";
+    public static final String CODE_RULE_NOT_FOUND = "RULE_NOT_FOUND";
+    public static final String CODE_UNAUTHORIZED = "UNAUTHORIZED";
+    public static final String CODE_PERMISSION_DENIED = "PERMISSION_DENIED";
+    public static final String CODE_INTERNAL_ERROR = "INTERNAL_ERROR";
+    public static final String CODE_INVALID_PARAMETER = "INVALID_PARAMETER";
+    public static final String CODE_FIREWALL_ERROR = "FIREWALL_ERROR";
 
     /**
      * 방화벽 정책 추가 API를 호출합니다.
@@ -45,15 +58,13 @@ public class FirewallApiClientService {
      * @param server    연동서버 정보
      * @param policyDto 추가할 정책 정보
      * @return API 호출 결과
-     * @throws FirewallApiException API 호출 중 오류 발생 시
      */
-    public FirewallApiResponse addPolicy(ServerObject server, PolicyDto policyDto) throws FirewallApiException {
+    public FirewallApiResponse addPolicy(ServerObject server, PolicyDto policyDto) {
         try {
             log.info("방화벽 정책 추가 API 호출: 서버={}, 정책 우선순위={}", server.getName(), policyDto.getPriority());
 
             // API 엔드포인트 URL 구성 - HTTP로 변경
             String apiUrl = String.format("http://%s:3000/api/v1/firewall/rules/add", server.getIpAddress());
-
             log.debug("호출 URL: {}", apiUrl);
 
             // 요청 헤더 구성
@@ -70,7 +81,7 @@ public class FirewallApiClientService {
             HttpEntity<FirewallRuleRequest> requestEntity = new HttpEntity<>(requestBody, headers);
 
             try {
-                // API 호출 - 응답 타입을 String으로 변경 (디버깅용)
+                // API 호출 - 응답 타입을 String으로 받아서 FirewallRuleResponse로 변환
                 ResponseEntity<String> response = restTemplate.exchange(
                         apiUrl,
                         HttpMethod.POST,
@@ -80,23 +91,30 @@ public class FirewallApiClientService {
                 log.debug("API 응답 상태 코드: {}", response.getStatusCode());
                 log.debug("API 응답 본문: {}", response.getBody());
 
-                // 성공 응답 반환 (실제로는 응답 내용을 파싱해야 함)
-                return new FirewallApiResponse(true, "방화벽 정책 추가에 성공했습니다.");
+                return processApiResponse(response.getBody(), "정책 추가");
             } catch (HttpClientErrorException.NotFound e) {
-                // 404 에러 처리 - 에러로 처리하지 않고 결과만 반환
+                // 404 에러 처리
                 log.warn("방화벽 API 엔드포인트를 찾을 수 없습니다 (404): {}", apiUrl);
                 log.debug("404 응답 본문: {}", e.getResponseBodyAsString());
 
-                // 결과 반환 (404이지만 실패로만 처리하고 예외는 발생시키지 않음)
-                return new FirewallApiResponse(
-                        false,
+                return processErrorResponse(e.getResponseBodyAsString(), CODE_RULE_NOT_FOUND,
                         "API 엔드포인트를 찾을 수 없습니다. (404 Not Found) 방화벽 서버가 실행 중인지 확인하세요.");
+            } catch (HttpClientErrorException e) {
+                // 4xx 에러 처리
+                log.warn("방화벽 API 호출 중 클라이언트 오류: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+                return processErrorResponse(e.getResponseBodyAsString(), CODE_INVALID_REQUEST,
+                        "방화벽 API 호출 중 클라이언트 오류가 발생했습니다: " + e.getStatusCode());
+            } catch (HttpServerErrorException e) {
+                // 5xx 에러 처리
+                log.warn("방화벽 API 호출 중 서버 오류: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+                return processErrorResponse(e.getResponseBodyAsString(), CODE_INTERNAL_ERROR,
+                        "방화벽 API 호출 중 서버 오류가 발생했습니다: " + e.getStatusCode());
             }
         } catch (Exception e) {
             handleApiException(e, "방화벽 정책 추가");
-
             // 예외를 발생시키지 않고 실패 응답으로 처리
-            return new FirewallApiResponse(false, "방화벽 정책 추가 API 호출 중 오류가 발생했습니다: " + e.getMessage());
+            return new FirewallApiResponse(false, CODE_INTERNAL_ERROR,
+                    "방화벽 정책 추가 API 호출 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
 
@@ -115,12 +133,11 @@ public class FirewallApiClientService {
             // ID로 정책 조회 - 실제 저장소에서 조회
             PolicyDto policyDto = getPolicyById(policyId);
             if (policyDto == null) {
-                return new FirewallApiResponse(false, "삭제할 정책을 찾을 수 없습니다: " + policyId);
+                return new FirewallApiResponse(false, CODE_RULE_NOT_FOUND, "삭제할 정책을 찾을 수 없습니다: " + policyId);
             }
 
             // API 엔드포인트 URL 구성 - HTTP로 변경
             String apiUrl = String.format("http://%s:3000/api/v1/firewall/rules/delete", server.getIpAddress());
-
             log.debug("호출 URL: {}", apiUrl);
 
             // 요청 헤더 구성
@@ -147,22 +164,145 @@ public class FirewallApiClientService {
                 log.debug("API 응답 상태 코드: {}", response.getStatusCode());
                 log.debug("API 응답 본문: {}", response.getBody());
 
-                // 성공 응답 반환
-                return new FirewallApiResponse(true, "방화벽 정책 삭제에 성공했습니다.");
+                return processApiResponse(response.getBody(), "정책 삭제");
             } catch (HttpClientErrorException.NotFound e) {
                 // 404 에러 처리
                 log.warn("방화벽 API 엔드포인트를 찾을 수 없습니다 (404): {}", apiUrl);
                 log.debug("404 응답 본문: {}", e.getResponseBodyAsString());
 
-                return new FirewallApiResponse(
-                        false,
+                return processErrorResponse(e.getResponseBodyAsString(), CODE_RULE_NOT_FOUND,
                         "API 엔드포인트를 찾을 수 없습니다. (404 Not Found) 방화벽 서버가 실행 중인지 확인하세요.");
+            } catch (HttpClientErrorException e) {
+                // 4xx 에러 처리
+                log.warn("방화벽 API 호출 중 클라이언트 오류: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+                return processErrorResponse(e.getResponseBodyAsString(), CODE_INVALID_REQUEST,
+                        "방화벽 API 호출 중 클라이언트 오류가 발생했습니다: " + e.getStatusCode());
+            } catch (HttpServerErrorException e) {
+                // 5xx 에러 처리
+                log.warn("방화벽 API 호출 중 서버 오류: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+                return processErrorResponse(e.getResponseBodyAsString(), CODE_INTERNAL_ERROR,
+                        "방화벽 API 호출 중 서버 오류가 발생했습니다: " + e.getStatusCode());
             }
         } catch (Exception e) {
             handleApiException(e, "방화벽 정책 삭제");
-
             // 예외를 발생시키지 않고 실패 응답으로 처리
-            return new FirewallApiResponse(false, "방화벽 정책 삭제 API 호출 중 오류가 발생했습니다: " + e.getMessage());
+            return new FirewallApiResponse(false, CODE_INTERNAL_ERROR,
+                    "방화벽 정책 삭제 API 호출 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
+    /**
+     * API 응답을 처리하고 FirewallApiResponse 객체로 변환합니다.
+     * 
+     * @param responseBody API 응답 본문
+     * @param operation    수행 중인 작업 명칭
+     * @return FirewallApiResponse 객체
+     */
+    private FirewallApiResponse processApiResponse(String responseBody, String operation) {
+        if (responseBody == null || responseBody.isEmpty()) {
+            log.warn("{} API 응답 본문이 비어있습니다.", operation);
+            return new FirewallApiResponse(false, CODE_INTERNAL_ERROR, operation + " 응답이 비어있습니다.");
+        }
+
+        try {
+            // 전체 FirewallRuleResponse 객체로 파싱 시도
+            FirewallRuleResponse apiResponse = objectMapper.readValue(responseBody, FirewallRuleResponse.class);
+
+            if (apiResponse != null) {
+                return new FirewallApiResponse(
+                        apiResponse.getSuccess() != null && apiResponse.getSuccess(),
+                        apiResponse.getCode(),
+                        apiResponse.getMessage());
+            }
+
+            // 파싱 실패 시 JsonNode로 부분 파싱 시도
+            return extractBasicResponseInfo(responseBody, operation);
+        } catch (Exception e) {
+            log.warn("{} API 응답 파싱 실패: {}", operation, e.getMessage());
+            // JsonNode로 부분 파싱 시도
+            return extractBasicResponseInfo(responseBody, operation);
+        }
+    }
+
+    /**
+     * API 오류 응답을 처리하고 FirewallApiResponse 객체로 변환합니다.
+     * 
+     * @param responseBody   에러 응답 본문
+     * @param defaultCode    기본 에러 코드
+     * @param defaultMessage 기본 에러 메시지
+     * @return FirewallApiResponse 객체
+     */
+    private FirewallApiResponse processErrorResponse(String responseBody, String defaultCode, String defaultMessage) {
+        if (responseBody == null || responseBody.isEmpty()) {
+            return new FirewallApiResponse(false, defaultCode, defaultMessage);
+        }
+
+        try {
+            // 응답을 JsonNode로 파싱해서 success, code, message 필드 추출 시도
+            JsonNode root = objectMapper.readTree(responseBody);
+
+            Boolean success = root.has("success") ? root.get("success").asBoolean(false) : false;
+            String code = root.has("code") ? root.get("code").asText(defaultCode) : defaultCode;
+            String message = root.has("message") ? root.get("message").asText(defaultMessage) : defaultMessage;
+
+            return new FirewallApiResponse(success, code, message);
+        } catch (Exception e) {
+            log.warn("오류 응답 파싱 실패: {}", e.getMessage());
+            return new FirewallApiResponse(false, defaultCode, defaultMessage);
+        }
+    }
+
+    /**
+     * API 응답에서 기본 정보(success, code, message)만 추출합니다.
+     * 
+     * @param responseBody API 응답 본문
+     * @param operation    수행 중인 작업 명칭
+     * @return FirewallApiResponse 객체
+     */
+    private FirewallApiResponse extractBasicResponseInfo(String responseBody, String operation) {
+        try {
+            JsonNode root = objectMapper.readTree(responseBody);
+
+            Boolean success = false;
+            String code = CODE_INTERNAL_ERROR;
+            String message = operation + " 응답을 처리할 수 없습니다.";
+
+            if (root.has("success")) {
+                success = root.get("success").asBoolean(false);
+            }
+
+            if (root.has("code")) {
+                code = root.get("code").asText(CODE_INTERNAL_ERROR);
+            }
+
+            if (root.has("message")) {
+                message = root.get("message").asText(message);
+            }
+
+            return new FirewallApiResponse(success, code, message);
+        } catch (Exception e) {
+            log.error("{} API 응답에서 기본 정보 추출 실패: {}", operation, e.getMessage());
+            return new FirewallApiResponse(false, CODE_INTERNAL_ERROR,
+                    operation + " API 응답 파싱 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
+    /**
+     * API 응답 문자열을 FirewallRuleResponse 객체로 파싱합니다.
+     * 
+     * @param responseBody API 응답 본문 (JSON 문자열)
+     * @return 파싱된 FirewallRuleResponse 객체 또는 파싱 실패 시 null
+     */
+    private FirewallRuleResponse parseApiResponse(String responseBody) {
+        if (responseBody == null || responseBody.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return objectMapper.readValue(responseBody, FirewallRuleResponse.class);
+        } catch (Exception e) {
+            log.error("API 응답 파싱 실패: {}", e.getMessage(), e);
+            return null;
         }
     }
 
@@ -384,13 +524,16 @@ public class FirewallApiClientService {
 
     /**
      * 방화벽 API 응답 결과를 담는 클래스
+     * code 필드 추가하여 API 응답 코드 표시
      */
     public static class FirewallApiResponse {
         private final boolean success;
+        private final String code;
         private final String message;
 
-        public FirewallApiResponse(boolean success, String message) {
+        public FirewallApiResponse(boolean success, String code, String message) {
             this.success = success;
+            this.code = code != null ? code : CODE_INTERNAL_ERROR;
             this.message = message;
         }
 
@@ -398,17 +541,12 @@ public class FirewallApiClientService {
             return success;
         }
 
+        public String getCode() {
+            return code;
+        }
+
         public String getMessage() {
             return message;
-        }
-    }
-
-    /**
-     * 방화벽 API 호출 중 발생하는 예외
-     */
-    public static class FirewallApiException extends Exception {
-        public FirewallApiException(String message, Throwable cause) {
-            super(message, cause);
         }
     }
 }
