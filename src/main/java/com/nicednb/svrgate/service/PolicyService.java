@@ -34,7 +34,7 @@ public class PolicyService {
     private final NetworkObjectRepository networkObjectRepository;
     private final OperationLogService operationLogService;
     private final AccountRepository accountRepository;
-    private final FirewallApiClientService firewallApiClient; // 추가: 방화벽 API 클라이언트 서비스 주입
+    private final FirewallApiClientService firewallApiClient;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -261,28 +261,22 @@ public class PolicyService {
 
         try {
             // 방화벽 API 호출하여 정책 추가
-            FirewallApiClientService.FirewallApiResponse apiResponse = firewallApiClient.addPolicy(serverObject,
-                    policyDto);
+            FirewallApiResponse apiResponse = firewallApiClient.addPolicy(serverObject, policyDto);
 
             // API 응답이 실패인 경우, 정책을 DB에 저장하지 않음
             if (!apiResponse.isSuccess()) {
-                log.warn("방화벽 정책 추가 API 호출 실패: code={}, message={}",
-                        apiResponse.getCode(), apiResponse.getMessage());
+                log.warn("방화벽 정책 추가 API 호출 실패: {}", apiResponse.getMessage());
 
                 // 작업 로그 기록 (실패)
                 operationLogService.logOperation(
                         username,
                         ipAddress,
                         false,
-                        "방화벽 API 오류: " + apiResponse.getMessage() +
-                                ", 코드: " + apiResponse.getCode() +
-                                ", 서버: " + serverObject.getName(),
+                        "방화벽 API 오류: " + apiResponse.getMessage() + ", 서버: " + serverObject.getName(),
                         "정책관리",
                         "정책 생성 실패");
 
-                return new PolicyOperationResult(false,
-                        String.format("방화벽 정책 추가 실패 - %s (코드: %s)",
-                                apiResponse.getMessage(), apiResponse.getCode()));
+                return new PolicyOperationResult(false, apiResponse.getMessage());
             }
 
             // DTO를 엔티티로 변환
@@ -293,12 +287,47 @@ public class PolicyService {
             // 정책 저장
             Policy savedPolicy = policyRepository.save(policy);
 
-            // 작업 로그 기록
+            // 출발지 객체 정보 가져오기
+            String sourceObjectName = getSourceObjectName(policy.getSourceObjectId(), policy.getSourceObjectType());
+
+            // 정책 상세 정보 구성
+            StringBuilder policyInfo = new StringBuilder();
+            policyInfo.append("정책 ID: ").append(savedPolicy.getId());
+            policyInfo.append(", 서버: ").append(serverObject.getName());
+            policyInfo.append(", 우선순위: ").append(savedPolicy.getPriority());
+            policyInfo.append(", 출발지 타입: ").append(savedPolicy.getSourceObjectType());
+            policyInfo.append(", 출발지 ID: ").append(savedPolicy.getSourceObjectId());
+            policyInfo.append(", 출발지 이름: ").append(sourceObjectName);
+            policyInfo.append(", 프로토콜: ").append(savedPolicy.getProtocol());
+
+            // 포트 정보 추가
+            if ("single".equals(savedPolicy.getPortMode())) {
+                policyInfo.append(", 포트: ").append(savedPolicy.getStartPort());
+            } else {
+                policyInfo.append(", 포트 범위: ").append(savedPolicy.getStartPort())
+                        .append("-").append(savedPolicy.getEndPort());
+            }
+
+            policyInfo.append(", 동작: ").append(savedPolicy.getAction());
+            policyInfo.append(", 로깅: ").append(savedPolicy.getLogging() ? "사용" : "미사용");
+
+            if (savedPolicy.getTimeLimit() != null && savedPolicy.getTimeLimit() > 0) {
+                policyInfo.append(", 시간제한: ").append(savedPolicy.getTimeLimit()).append("시간");
+                policyInfo.append(", 만료 시간: ").append(savedPolicy.getExpiresAt());
+            } else {
+                policyInfo.append(", 시간제한: 없음");
+            }
+
+            if (savedPolicy.getRequester() != null && !savedPolicy.getRequester().isEmpty()) {
+                policyInfo.append(", 요청자: ").append(savedPolicy.getRequester());
+            }
+
+            // 작업 로그 기록 (상세 정보 포함)
             operationLogService.logOperation(
                     username,
                     ipAddress,
                     true,
-                    "정책 ID: " + savedPolicy.getId() + ", 서버: " + serverObject.getName(),
+                    policyInfo.toString(),
                     "정책관리",
                     "정책 생성");
 
@@ -320,7 +349,7 @@ public class PolicyService {
     }
 
     /**
-     * 정책 수정 - 요청자와 설명만 수정 가능 (기존 로직 유지)
+     * 정책 수정 - 요청자와 설명만 수정 가능 (상세 로깅 추가)
      */
     @Transactional
     public PolicyDto updatePolicy(PolicyDto policyDto, String ipAddress) {
@@ -335,6 +364,14 @@ public class PolicyService {
         // 서버 존재 여부 확인
         ServerObject serverObject = existingPolicy.getServerObject(); // 기존 서버 객체 사용
 
+        // 변경 전 정보 저장 (비교용)
+        String oldRequester = existingPolicy.getRequester();
+        String oldDescription = existingPolicy.getDescription();
+
+        // 출발지 객체 정보 가져오기
+        String sourceObjectName = getSourceObjectName(existingPolicy.getSourceObjectId(),
+                existingPolicy.getSourceObjectType());
+
         // 요청자와 설명만 업데이트
         existingPolicy.setRequester(policyDto.getRequester());
         existingPolicy.setDescription(policyDto.getDescription());
@@ -342,12 +379,38 @@ public class PolicyService {
         // 정책 저장
         Policy updatedPolicy = policyRepository.save(existingPolicy);
 
-        // 작업 로그 기록
+        // 정책 상세 정보 구성
+        StringBuilder policyInfo = new StringBuilder();
+        policyInfo.append("정책 ID: ").append(updatedPolicy.getId());
+        policyInfo.append(", 서버: ").append(serverObject.getName());
+        policyInfo.append(", 우선순위: ").append(updatedPolicy.getPriority());
+        policyInfo.append(", 출발지 타입: ").append(updatedPolicy.getSourceObjectType());
+        policyInfo.append(", 출발지 ID: ").append(updatedPolicy.getSourceObjectId());
+        policyInfo.append(", 출발지 이름: ").append(sourceObjectName);
+        policyInfo.append(", 프로토콜: ").append(updatedPolicy.getProtocol());
+
+        // 포트 정보 추가
+        if ("single".equals(updatedPolicy.getPortMode())) {
+            policyInfo.append(", 포트: ").append(updatedPolicy.getStartPort());
+        } else {
+            policyInfo.append(", 포트 범위: ").append(updatedPolicy.getStartPort())
+                    .append("-").append(updatedPolicy.getEndPort());
+        }
+
+        policyInfo.append(", 동작: ").append(updatedPolicy.getAction());
+
+        // 변경 정보 추가
+        policyInfo.append(", 요청자 변경: [").append(oldRequester != null ? oldRequester : "").append("] → [")
+                .append(updatedPolicy.getRequester() != null ? updatedPolicy.getRequester() : "").append("]");
+        policyInfo.append(", 설명 변경: [").append(oldDescription != null ? oldDescription : "").append("] → [")
+                .append(updatedPolicy.getDescription() != null ? updatedPolicy.getDescription() : "").append("]");
+
+        // 작업 로그 기록 (상세 정보 포함)
         operationLogService.logOperation(
                 username,
                 ipAddress,
                 true,
-                "정책 ID: " + updatedPolicy.getId() + ", 서버: " + serverObject.getName(),
+                policyInfo.toString(),
                 "정책관리",
                 "정책 메타정보 수정(요청자/설명)");
 
@@ -377,43 +440,84 @@ public class PolicyService {
             throw new IllegalStateException("정책에 연결된 서버 객체가 없습니다.");
         }
 
-        // 서버 이름 저장 (로깅용)
-        String serverName = serverObject.getName();
+        // 출발지 객체 정보 가져오기
+        String sourceObjectName = getSourceObjectName(policy.getSourceObjectId(), policy.getSourceObjectType());
+
+        // 정책 상세 정보 구성 (삭제 전에 모든 정보 수집)
+        StringBuilder policyInfo = new StringBuilder();
+        policyInfo.append("정책 ID: ").append(policy.getId());
+        policyInfo.append(", 서버: ").append(serverObject.getName());
+        policyInfo.append(", 우선순위: ").append(policy.getPriority());
+        policyInfo.append(", 출발지 타입: ").append(policy.getSourceObjectType());
+        policyInfo.append(", 출발지 ID: ").append(policy.getSourceObjectId());
+        policyInfo.append(", 출발지 이름: ").append(sourceObjectName);
+        policyInfo.append(", 프로토콜: ").append(policy.getProtocol());
+
+        // 포트 정보 추가
+        if ("single".equals(policy.getPortMode())) {
+            policyInfo.append(", 포트: ").append(policy.getStartPort());
+        } else {
+            policyInfo.append(", 포트 범위: ").append(policy.getStartPort())
+                    .append("-").append(policy.getEndPort());
+        }
+
+        policyInfo.append(", 동작: ").append(policy.getAction());
+        policyInfo.append(", 로깅: ").append(policy.getLogging() ? "사용" : "미사용");
+
+        if (policy.getTimeLimit() != null && policy.getTimeLimit() > 0) {
+            policyInfo.append(", 시간제한: ").append(policy.getTimeLimit()).append("시간");
+            if (policy.getExpiresAt() != null) {
+                policyInfo.append(", 만료 시간: ").append(policy.getExpiresAt().format(DATE_TIME_FORMATTER));
+            }
+        } else {
+            policyInfo.append(", 시간제한: 없음");
+        }
+
+        if (policy.getRequester() != null && !policy.getRequester().isEmpty()) {
+            policyInfo.append(", 요청자: ").append(policy.getRequester());
+        }
+
+        if (policy.getRegistrar() != null && !policy.getRegistrar().isEmpty()) {
+            policyInfo.append(", 등록자: ").append(policy.getRegistrar());
+        }
+
+        if (policy.getRegistrationDate() != null) {
+            policyInfo.append(", 등록일: ").append(policy.getRegistrationDate().format(DATE_TIME_FORMATTER));
+        }
+
+        if (policy.getDescription() != null && !policy.getDescription().isEmpty()) {
+            policyInfo.append(", 설명: ").append(policy.getDescription());
+        }
 
         try {
             // 방화벽 API 호출하여 정책 삭제
-            FirewallApiClientService.FirewallApiResponse apiResponse = firewallApiClient.deletePolicy(serverObject, id);
+            FirewallApiResponse apiResponse = firewallApiClient.deletePolicy(serverObject, id);
 
             // API 응답이 실패인 경우, 정책을 DB에서 삭제하지 않음
             if (!apiResponse.isSuccess()) {
-                log.warn("방화벽 정책 삭제 API 호출 실패: code={}, message={}",
-                        apiResponse.getCode(), apiResponse.getMessage());
+                log.warn("방화벽 정책 삭제 API 호출 실패: {}", apiResponse.getMessage());
 
                 // 작업 로그 기록 (실패)
                 operationLogService.logOperation(
                         username,
                         ipAddress,
                         false,
-                        "방화벽 API 오류: " + apiResponse.getMessage() +
-                                ", 코드: " + apiResponse.getCode() +
-                                ", 정책 ID: " + id + ", 서버: " + serverName,
+                        "방화벽 API 오류: " + apiResponse.getMessage() + ", " + policyInfo.toString(),
                         "정책관리",
                         "정책 삭제 실패");
 
-                return new PolicyOperationResult(false,
-                        String.format("방화벽 정책 삭제 실패 - %s (코드: %s)",
-                                apiResponse.getMessage(), apiResponse.getCode()));
+                return new PolicyOperationResult(false, apiResponse.getMessage());
             }
 
             // 정책 삭제
             policyRepository.delete(policy);
 
-            // 작업 로그 기록
+            // 작업 로그 기록 (상세 정보 포함)
             operationLogService.logOperation(
                     username,
                     ipAddress,
                     true,
-                    "정책 ID: " + id + ", 서버: " + serverName,
+                    policyInfo.toString(),
                     "정책관리",
                     "정책 삭제");
 
@@ -426,7 +530,7 @@ public class PolicyService {
                     username,
                     ipAddress,
                     false,
-                    "오류: " + e.getMessage() + ", 정책 ID: " + id + ", 서버: " + serverName,
+                    "오류: " + e.getMessage() + ", " + policyInfo.toString(),
                     "정책관리",
                     "정책 삭제 실패");
 
