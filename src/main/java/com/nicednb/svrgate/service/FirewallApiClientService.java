@@ -41,6 +41,7 @@ public class FirewallApiClientService {
     private final GeneralObjectRepository generalObjectRepository;
     private final NetworkObjectRepository networkObjectRepository;
     private final PolicyRepository policyRepository;
+    private final SystemSettingService systemSettingService; // 시스템 설정 서비스 주입
 
     // API 응답 코드 상수 정의
     public static final String CODE_SUCCESS = "SUCCESS";
@@ -63,8 +64,11 @@ public class FirewallApiClientService {
         try {
             log.info("방화벽 정책 추가 API 호출: 서버={}, 정책 우선순위={}", server.getName(), policyDto.getPriority());
 
+            // 시스템 설정에서 포트 가져오기
+            int serverPort = systemSettingService.getServerConnectionPort();
+
             // API 엔드포인트 URL 구성 - HTTP로 변경
-            String apiUrl = String.format("http://%s:3000/api/v1/firewall/rules/add", server.getIpAddress());
+            String apiUrl = String.format("http://%s:%d/api/v1/firewall/rules/add", server.getIpAddress(), serverPort);
             log.debug("호출 URL: {}", apiUrl);
 
             // 요청 헤더 구성
@@ -136,8 +140,11 @@ public class FirewallApiClientService {
                 return new FirewallApiResponse(false, CODE_RULE_NOT_FOUND, "삭제할 정책을 찾을 수 없습니다: " + policyId);
             }
 
+            // 시스템 설정에서 포트 가져오기
+            int serverPort = systemSettingService.getServerConnectionPort();
+
             // API 엔드포인트 URL 구성 - HTTP로 변경
-            String apiUrl = String.format("http://%s:3000/api/v1/firewall/rules/delete", server.getIpAddress());
+            String apiUrl = String.format("http://%s:%d/api/v1/firewall/rules/delete", server.getIpAddress(), serverPort);
             log.debug("호출 URL: {}", apiUrl);
 
             // 요청 헤더 구성

@@ -80,10 +80,10 @@
         </div>
       </div>
       
-      <!-- 연동 설정 카드 -->
+      <!-- 서버 연동 설정 카드 -->
       <div class="card settings-card">
         <div class="card-header">
-            연동 설정
+            서버 연동
         </div>
         <div class="card-body">
             <!-- 서버정책 수집주기 -->
@@ -110,6 +110,40 @@
                 </div>
             </div>
             
+            <!-- 정책 만료 확인 주기 -->
+            <div class="row mb-3">
+                <label for="policyExpiryCheckCycle" class="col-sm-4 col-form-label">정책 만료 확인 주기</label>
+                <div class="col-sm-8">
+                    <div class="input-group">
+                        <input type="number" id="policyExpiryCheckCycle" class="form-control" th:field="*{policyExpiryCheckCycle}" min="1" required>
+                        <span class="input-group-text">초</span>
+                    </div>
+                    <div class="text-danger" th:if="${#fields.hasErrors('policyExpiryCheckCycle')}" th:errors="*{policyExpiryCheckCycle}"></div>
+                    <small class="form-text text-muted">시간제한이 있는 정책의 만료 여부를 확인하는 주기입니다.</small>
+                </div>
+            </div>
+            
+            <!-- 서버 연동 포트 (신규) -->
+            <div class="row mb-3">
+                <label for="serverConnectionPort" class="col-sm-4 col-form-label">연동 포트</label>
+                <div class="col-sm-8">
+                    <div class="input-group">
+                        <input type="number" id="serverConnectionPort" class="form-control" th:field="*{serverConnectionPort}" min="1" max="65535" required>
+                        <span class="input-group-text">번</span>
+                    </div>
+                    <div class="text-danger" th:if="${#fields.hasErrors('serverConnectionPort')}" th:errors="*{serverConnectionPort}"></div>
+                    <small class="form-text text-muted">서버 API 연동에 사용할 포트 번호입니다.</small>
+                </div>
+            </div>
+        </div>
+      </div>
+      
+      <!-- 방화벽 연동 설정 카드 -->
+      <div class="card settings-card">
+        <div class="card-header">
+            방화벽 연동
+        </div>
+        <div class="card-body">
             <!-- 방화벽정책 수집주기 -->
             <div class="row mb-3">
                 <label for="firewallPolicyCycle" class="col-sm-4 col-form-label">방화벽정책 수집주기</label>
@@ -131,19 +165,6 @@
                         <span class="input-group-text">개</span>
                     </div>
                     <div class="text-danger" th:if="${#fields.hasErrors('concurrentFirewalls')}" th:errors="*{concurrentFirewalls}"></div>
-                </div>
-            </div>
-            
-            <!-- 정책 만료 확인 주기 (추가됨) -->
-            <div class="row mb-3">
-                <label for="policyExpiryCheckCycle" class="col-sm-4 col-form-label">정책 만료 확인 주기</label>
-                <div class="col-sm-8">
-                    <div class="input-group">
-                        <input type="number" id="policyExpiryCheckCycle" class="form-control" th:field="*{policyExpiryCheckCycle}" min="1" required>
-                        <span class="input-group-text">초</span>
-                    </div>
-                    <div class="text-danger" th:if="${#fields.hasErrors('policyExpiryCheckCycle')}" th:errors="*{policyExpiryCheckCycle}"></div>
-                    <small class="form-text text-muted">시간제한이 있는 정책의 만료 여부를 확인하는 주기입니다.</small>
                 </div>
             </div>
         </div>
