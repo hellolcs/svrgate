@@ -42,4 +42,27 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
         // 만료된 정책 찾기
         @Query("SELECT p FROM Policy p WHERE p.expiresAt IS NOT NULL AND p.expiresAt <= :currentTime")
         List<Policy> findExpiredPolicies(@Param("currentTime") LocalDateTime currentTime);
+
+        // 서버 ID로 시간제한이 없는 정책 목록 조회
+        List<Policy> findByServerObjectIdAndTimeLimitIsNull(Long serverObjectId);
+
+        // 서버 ID로 정책 목록과 구체적인 조건으로 정책 조회
+        @Query("SELECT p FROM Policy p WHERE p.serverObject.id = :serverId " +
+                        "AND p.timeLimit IS NULL " +
+                        "AND p.sourceObjectIp = :ipAddress " +
+                        "AND p.sourceObjectBit = :bit " +
+                        "AND p.protocol = :protocol " +
+                        "AND p.portMode = :portMode " +
+                        "AND p.startPort = :startPort " +
+                        "AND p.endPort = :endPort " +
+                        "AND p.action = :action")
+        List<Policy> findMatchingPolicies(
+                        @Param("serverId") Long serverId,
+                        @Param("ipAddress") String ipAddress,
+                        @Param("bit") Integer bit,
+                        @Param("protocol") String protocol,
+                        @Param("portMode") String portMode,
+                        @Param("startPort") Integer startPort,
+                        @Param("endPort") Integer endPort,
+                        @Param("action") String action);
 }

@@ -26,6 +26,13 @@ public class Policy {
     
     @Column(nullable = false, length = 20)
     private String sourceObjectType; // 출발지 객체 유형 (SERVER, GENERAL, NETWORK)
+    
+    // 방화벽 정책 매핑을 위한 추가 필드
+    @Column(length = 50)
+    private String sourceObjectIp;  // 출발지 IP
+
+    @Column
+    private Integer sourceObjectBit;  // 출발지 넷마스크 비트
 
     @Column(nullable = false, length = 10)
     private String protocol; // 프로토콜 (tcp, udp)
@@ -52,7 +59,7 @@ public class Policy {
     private LocalDateTime registrationDate; // 등록일
 
     @Column
-    private LocalDateTime expiresAt; // 정책 만료 시간 (추가됨)
+    private LocalDateTime expiresAt; // 정책 만료 시간
 
     @Column(length = 32, columnDefinition = "VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     private String requester; // 요청자
@@ -74,6 +81,10 @@ public class Policy {
 
     @Column
     private LocalDateTime updatedAt;
+    
+    // 낙관적 락을 위한 버전 필드
+    @Version
+    private Long version;
 
     // 생성 전 이벤트
     @PrePersist
