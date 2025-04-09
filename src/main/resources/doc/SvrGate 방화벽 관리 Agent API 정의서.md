@@ -222,15 +222,10 @@ GET /api/v1/firewall/rules
 
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
-| protocol | String | X | 프로토콜 필터 (tcp/udp) |
-| rule | String | X | 정책 종류 필터 (accept/reject) |
-| ip | String | X | IP 주소 필터 |
-| page | Integer | X | 페이지 번호 (기본값: 1) |
-| size | Integer | X | 페이지 크기 (기본값: 20) |
 
 ### 5.4 요청 예시
 ```
-GET /api/v1/firewall/rules?protocol=tcp&rule=accept&page=1&size=10
+GET /api/v1/firewall/rules
 X-API-Key: your-api-key-here
 ```
 
@@ -242,8 +237,6 @@ X-API-Key: your-api-key-here
 | code | String | 응답 코드 |
 | message | String | 응답 메시지 |
 | data.total | Integer | 전체 정책 수 |
-| data.page | Integer | 현재 페이지 |
-| data.size | Integer | 페이지 크기 |
 | data.rules | Array | 정책 목록 |
 | data.rules[].priority | Integer | 정책 우선순위 |
 | data.rules[].ip | Object | IP 정보 |
@@ -263,8 +256,6 @@ X-API-Key: your-api-key-here
   "message": "방화벽 정책 조회가 성공적으로 완료되었습니다",
   "data": {
     "total": 45,
-    "page": 1,
-    "size": 10,
     "rules": [
       {
         "priority": 1,
@@ -433,7 +424,7 @@ Content-Type: application/json
 
 **요청:**
 ```
-GET /api/v1/firewall/rules?rule=accept&protocol=tcp
+GET /api/v1/firewall/rules
 X-API-Key: your-api-key-here
 ```
 
@@ -445,8 +436,6 @@ X-API-Key: your-api-key-here
   "message": "방화벽 정책 조회가 성공적으로 완료되었습니다",
   "data": {
     "total": 25,
-    "page": 1,
-    "size": 20,
     "rules": [
       // TCP Accept 정책들...
     ]

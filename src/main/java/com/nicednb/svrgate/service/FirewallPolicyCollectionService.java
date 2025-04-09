@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * 방화벽 정책 수집 서비스
@@ -139,7 +138,7 @@ public class FirewallPolicyCollectionService {
         log.info("서버 {}({})에서 방화벽 정책 수집 시작", server.getName(), server.getId());
         
         try {
-            // API 엔드포인트 URL 구성
+            // API 엔드포인트 URL 구성 - 페이징 파라미터 제거
             String apiUrl = String.format("http://%s:%d/api/v1/firewall/rules", 
                     server.getIpAddress(), serverPort);
             

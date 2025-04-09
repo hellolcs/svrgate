@@ -14,8 +14,7 @@ public class FirewallRulesResponse {
     @Data
     public static class ResponseData {
         private Integer total;
-        private Integer page;
-        private Integer size;
+        // page와 size 필드 제거
         private List<FirewallRule> rules;
     }
     
