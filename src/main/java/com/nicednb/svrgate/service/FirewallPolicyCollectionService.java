@@ -38,7 +38,7 @@ public class FirewallPolicyCollectionService {
     private final SystemSettingService systemSettingService;
     private final OperationLogService operationLogService;
     private final RestTemplate restTemplate;
-    // 추가: GeneralObject와 NetworkObject 리포지토리 주입
+    // GeneralObject와 NetworkObject 리포지토리 주입
     private final GeneralObjectRepository generalObjectRepository;
     private final NetworkObjectRepository networkObjectRepository;
     
@@ -162,8 +162,17 @@ public class FirewallPolicyCollectionService {
             
             log.info("서버 {}에서 {}개의 방화벽 정책을 조회했습니다.", server.getName(), rules.size());
             
-            // 시간제한이 무제한인 기존 정책 조회
+            // 시간제한이 무제한인 기존 정책 조회 - 버전 필드 처리를 위해 각 정책 확인
             List<Policy> unlimitedPolicies = policyRepository.findByServerObjectIdAndTimeLimitIsNull(server.getId());
+            
+            // 버전 필드 초기화 확인 및 처리
+            for (Policy policy : unlimitedPolicies) {
+                if (policy.getVersion() == null) {
+                    log.info("정책 ID {}의 버전 필드가 null입니다. 초기화합니다.", policy.getId());
+                    policy.setVersion(0L);
+                    policyRepository.save(policy);
+                }
+            }
             
             // 정책 비교 및 갱신
             updatePolicies(server, rules, unlimitedPolicies);
@@ -184,7 +193,8 @@ public class FirewallPolicyCollectionService {
             throw e;
         }
     }
-     /**
+
+    /**
      * 출발지 IP와 bit를 기반으로 객체를 찾거나 생성합니다.
      * 
      * @param ipAddress IP 주소
@@ -338,7 +348,8 @@ public class FirewallPolicyCollectionService {
             // 프로토콜과 액션
             String protocol = rule.getProtocol();
             String action = rule.getRule();
-  // 출발지 객체 찾거나 생성
+            
+            // 출발지 객체 찾거나 생성
             Map<String, Object> sourceObject = findOrCreateSourceObject(ipv4Ip, bit);
             Long sourceObjectId = (Long) sourceObject.get("id");
             String sourceObjectType = (String) sourceObject.get("type");
@@ -377,11 +388,16 @@ public class FirewallPolicyCollectionService {
                         matchingPolicy.setSourceObjectBit(bit);
                     }
                     
+                    // 버전 필드 확인 및 초기화
+                    if (matchingPolicy.getVersion() == null) {
+                        matchingPolicy.setVersion(0L);
+                    }
+                    
                     policyRepository.save(matchingPolicy);
                 }
             } else {
                 // 정책이 존재하지 않으면 새로 생성
-                Policy newPolicy = createPolicyFromFirewallRule(server, rule);
+                Policy newPolicy = createPolicyFromFirewallRule(server, rule, sourceObjectId, sourceObjectType);
                 log.info("서버 {}에 새 정책 추가: 우선순위={}, 출발지={}({}/{}) ID={}, 프로토콜={}", 
                         server.getName(), newPolicy.getPriority(), 
                         sourceObjectType, ipv4Ip, bit, 
@@ -403,12 +419,18 @@ public class FirewallPolicyCollectionService {
     
     /**
      * 방화벽 정책으로부터 DB 정책 엔티티를 생성합니다.
+     * sourceObjectId와 sourceObjectType을 매개변수로 받도록 수정
      * 
      * @param server 서버 객체
      * @param rule 방화벽 정책
+     * @param sourceObjectId 출발지 객체 ID
+     * @param sourceObjectType 출발지 객체 타입
      * @return 생성된 정책 엔티티
      */
-    private Policy createPolicyFromFirewallRule(ServerObject server, FirewallRulesResponse.FirewallRule rule) {
+    private Policy createPolicyFromFirewallRule(ServerObject server, 
+                                               FirewallRulesResponse.FirewallRule rule,
+                                               Long sourceObjectId,
+                                               String sourceObjectType) {
         Policy policy = new Policy();
         
         // 서버 설정
@@ -417,11 +439,11 @@ public class FirewallPolicyCollectionService {
         // 우선순위
         policy.setPriority(rule.getPriority());
         
-        // 출발지 정보 - 단순 IP 정보 설정
+        // 출발지 정보 - 객체 ID와 타입 설정
         policy.setSourceObjectIp(rule.getIp().getIpv4Ip());
         policy.setSourceObjectBit(rule.getIp().getBit());
-        policy.setSourceObjectType("DIRECT_IP");  // 직접 IP 방식으로 설정
-        policy.setSourceObjectId(0L);  // 직접 IP 방식이므로 0으로 설정
+        policy.setSourceObjectType(sourceObjectType);  // 객체 타입 설정
+        policy.setSourceObjectId(sourceObjectId);  // 객체 ID 설정
         
         // 프로토콜
         policy.setProtocol(rule.getProtocol());
@@ -468,6 +490,9 @@ public class FirewallPolicyCollectionService {
         policy.setRegistrationDate(LocalDateTime.now());
         policy.setRegistrar("SYSTEM");  // 시스템에 의한 자동 등록
         policy.setDescription("방화벽에서 자동 수집된 정책");
+        
+        // 버전 필드 초기화
+        policy.setVersion(0L);
         
         return policy;
     }

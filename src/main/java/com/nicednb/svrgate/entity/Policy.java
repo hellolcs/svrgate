@@ -84,7 +84,8 @@ public class Policy {
     
     // 낙관적 락을 위한 버전 필드
     @Version
-    private Long version;
+    @Column(columnDefinition = "BIGINT DEFAULT 0")
+    private Long version = 0L; // 기본값 0으로 초기화
 
     // 생성 전 이벤트
     @PrePersist
@@ -97,6 +98,11 @@ public class Policy {
         // 시간제한이 설정된 경우 만료 시간 계산
         if (this.timeLimit != null && this.timeLimit > 0) {
             this.expiresAt = this.createdAt.plusHours(this.timeLimit);
+        }
+        
+        // 버전 필드 초기화 (null인 경우)
+        if (this.version == null) {
+            this.version = 0L;
         }
     }
 
@@ -111,6 +117,11 @@ public class Policy {
             this.expiresAt = this.registrationDate.plusHours(this.timeLimit);
         } else {
             this.expiresAt = null; // 시간제한이 없는 경우 만료 시간을 null로 설정
+        }
+        
+        // 버전 필드 초기화 (null인 경우)
+        if (this.version == null) {
+            this.version = 0L;
         }
     }
 }
