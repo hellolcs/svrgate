@@ -1,5 +1,7 @@
 package com.nicednb.svrgate.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
 
 /**
@@ -18,6 +20,7 @@ public class FirewallRuleResponse {
      */
     @Data
     public static class ResponseData {
+        @JsonProperty("deleted_at")
         private String deletedAt;
     }
 }

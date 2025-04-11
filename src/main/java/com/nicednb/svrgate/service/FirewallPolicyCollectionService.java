@@ -190,7 +190,8 @@ public class FirewallPolicyCollectionService {
 
             log.debug("서버 {}에서 방화벽 정책 수집 완료", server.getName());
         } catch (Exception e) {
-            // log.error("서버 {}에서 방화벽 정책 수집 중 오류 발생: {}", server.getName(), e.getMessage(), e);
+            // log.error("서버 {}에서 방화벽 정책 수집 중 오류 발생: {}", server.getName(), e.getMessage(),
+            // e);
             handleApiException(e, "방화벽 정책 수집");
 
         }
@@ -394,18 +395,43 @@ public class FirewallPolicyCollectionService {
                         matchingPolicy.setVersion(0L);
                     }
 
-                    policyRepository.save(matchingPolicy);
-                }
-            } else {
-                // 정책이 존재하지 않으면 새로 생성
-                Policy newPolicy = createPolicyFromFirewallRule(server, rule, sourceObjectId, sourceObjectType);
-                log.info("서버 {}에 새 정책 추가: 우선순위={}, 출발지={}({}/{}) ID={}, 프로토콜={}",
-                        server.getName(), newPolicy.getPriority(),
-                        sourceObjectType, ipv4Ip, bit,
-                        sourceObjectId, newPolicy.getProtocol());
+                    Policy savedPolicy = policyRepository.save(matchingPolicy);
 
-                // 새 정책 저장
-                policyRepository.save(newPolicy);
+                    // 출발지 객체 정보 가져오기
+                    String sourceObjectName = getSourceObjectName(matchingPolicy.getSourceObjectId(),
+                    matchingPolicy.getSourceObjectType());
+
+                    // 정책 상세 정보 구성
+                    StringBuilder policyInfo = new StringBuilder();
+                    policyInfo.append("정책 ID: ").append(savedPolicy.getId());
+                    policyInfo.append(", 서버: ").append(server.getName());
+                    policyInfo.append(", 우선순위: ").append(savedPolicy.getPriority());
+                    policyInfo.append(", 출발지 타입: ").append(savedPolicy.getSourceObjectType());
+                    policyInfo.append(", 출발지 ID: ").append(savedPolicy.getSourceObjectId());
+                    policyInfo.append(", 출발지 이름: ").append(sourceObjectName);
+                    policyInfo.append(", 프로토콜: ").append(savedPolicy.getProtocol());
+
+                    // 포트 정보 추가
+                    if ("single".equals(savedPolicy.getPortMode())) {
+                        policyInfo.append(", 포트: ").append(savedPolicy.getStartPort());
+                    } else {
+                        policyInfo.append(", 포트 범위: ").append(savedPolicy.getStartPort())
+                                .append("-").append(savedPolicy.getEndPort());
+                    }
+
+                    policyInfo.append(", 동작: ").append(savedPolicy.getAction());
+                    policyInfo.append(", 로깅: ").append(savedPolicy.getLogging() ? "사용" : "미사용");
+
+                    // 작업 로그 기록
+                    operationLogService.logOperation(
+                            "SYSTEM",
+                            "127.0.0.1",
+                            true,
+                            policyInfo.toString(),
+                            "정책관리",
+                            "방화벽 정책 자동 등록록");
+                }
+
             }
         }
 
@@ -455,6 +481,32 @@ public class FirewallPolicyCollectionService {
         }
 
         log.debug("서버 {}의 방화벽 정책 비교 및 갱신 완료", server.getName());
+    }
+    /**
+     * 출발지 객체 이름 조회
+     */
+    @Transactional(readOnly = true)
+    public String getSourceObjectName(Long id, String type) {
+        if (id == null || type == null) {
+            return "";
+        }
+
+        switch (type) {
+            case "SERVER":
+                return serverObjectRepository.findById(id)
+                        .map(ServerObject::getName)
+                        .orElse("");
+            case "GENERAL":
+                return generalObjectRepository.findById(id)
+                        .map(GeneralObject::getName)
+                        .orElse("");
+            case "NETWORK":
+                return networkObjectRepository.findById(id)
+                        .map(NetworkObject::getName)
+                        .orElse("");
+            default:
+                return "";
+        }
     }
 
     /**
@@ -537,7 +589,7 @@ public class FirewallPolicyCollectionService {
         return policy;
     }
 
-        /**
+    /**
      * API 예외 처리 메서드
      * 
      * @param e         발생한 예외
