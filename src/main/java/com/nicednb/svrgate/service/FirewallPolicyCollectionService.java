@@ -410,8 +410,7 @@ public class FirewallPolicyCollectionService {
                 Policy savedPolicy = policyRepository.save(newPolicy);
 
                 // 출발지 객체 정보 가져오기
-                String sourceObjectName = getSourceObjectName(matchingPolicy.getSourceObjectId(),
-                        matchingPolicy.getSourceObjectType());
+                String sourceObjectName = getSourceObjectName(sourceObjectId,sourceObjectType);
 
                 // 정책 상세 정보 구성
                 StringBuilder policyInfo = new StringBuilder();
