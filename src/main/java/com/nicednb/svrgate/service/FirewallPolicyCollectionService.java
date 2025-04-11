@@ -15,6 +15,9 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -187,8 +190,9 @@ public class FirewallPolicyCollectionService {
 
             log.debug("서버 {}에서 방화벽 정책 수집 완료", server.getName());
         } catch (Exception e) {
-            log.error("서버 {}에서 방화벽 정책 수집 중 오류 발생: {}", server.getName(), e.getMessage(), e);
-            throw e;
+            // log.error("서버 {}에서 방화벽 정책 수집 중 오류 발생: {}", server.getName(), e.getMessage(), e);
+            handleApiException(e, "방화벽 정책 수집");
+
         }
     }
 
@@ -531,5 +535,27 @@ public class FirewallPolicyCollectionService {
         policy.setVersion(0L);
 
         return policy;
+    }
+
+        /**
+     * API 예외 처리 메서드
+     * 
+     * @param e         발생한 예외
+     * @param operation 수행 중이던 작업 이름
+     */
+    private void handleApiException(Exception e, String operation) {
+        if (e instanceof ResourceAccessException) {
+            log.error("{} API 호출 중 서버 연결 실패 (타임아웃 또는 연결 거부): {}", operation, e.getMessage());
+        } else if (e instanceof HttpClientErrorException) {
+            HttpClientErrorException clientError = (HttpClientErrorException) e;
+            log.error("{} API 호출 중 클라이언트 오류: {} - {}",
+                    operation, clientError.getStatusCode(), clientError.getResponseBodyAsString());
+        } else if (e instanceof HttpServerErrorException) {
+            HttpServerErrorException serverError = (HttpServerErrorException) e;
+            log.error("{} API 호출 중 서버 오류: {} - {}",
+                    operation, serverError.getStatusCode(), serverError.getResponseBodyAsString());
+        } else {
+            log.error("{} API 호출 중 예상치 못한 오류: {}", operation, e.getMessage(), e);
+        }
     }
 }
