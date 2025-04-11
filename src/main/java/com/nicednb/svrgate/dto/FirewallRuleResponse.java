@@ -18,8 +18,6 @@ public class FirewallRuleResponse {
      */
     @Data
     public static class ResponseData {
-        private String createdAt;
-        private String expiresAt;
         private String deletedAt;
     }
 }

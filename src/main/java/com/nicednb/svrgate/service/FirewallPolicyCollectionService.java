@@ -76,7 +76,7 @@ public class FirewallPolicyCollectionService {
         for (ServerObject server : activeServers) {
             // 이미 처리 중인 서버는 건너뜀
             if (serverProcessingFlags.getOrDefault(server.getId(), false)) {
-                log.info("서버 {}({})는 이미 처리 중입니다. 건너뜁니다.", server.getName(), server.getId());
+                log.debug("서버 {}({})는 이미 처리 중입니다. 건너뜁니다.", server.getName(), server.getId());
                 continue;
             }
             
@@ -125,7 +125,7 @@ public class FirewallPolicyCollectionService {
             backoff = @Backoff(delay = 500, multiplier = 2)
     )
     public void collectPoliciesFromServer(ServerObject server, int serverPort) {
-        log.info("서버 {}({})에서 방화벽 정책 수집 시작", server.getName(), server.getId());
+        log.debug("서버 {}({})에서 방화벽 정책 수집 시작", server.getName(), server.getId());
         
         try {
             // API 엔드포인트 URL 구성 - 페이징 파라미터 제거
@@ -160,7 +160,7 @@ public class FirewallPolicyCollectionService {
             List<FirewallRulesResponse.FirewallRule> rules = 
                     rulesResponse.getData() != null ? rulesResponse.getData().getRules() : new ArrayList<>();
             
-            log.info("서버 {}에서 {}개의 방화벽 정책을 조회했습니다.", server.getName(), rules.size());
+            log.debug("서버 {}에서 {}개의 방화벽 정책을 조회했습니다.", server.getName(), rules.size());
             
             // 시간제한이 무제한인 기존 정책 조회 - 버전 필드 처리를 위해 각 정책 확인
             List<Policy> unlimitedPolicies = policyRepository.findByServerObjectIdAndTimeLimitIsNull(server.getId());
@@ -177,17 +177,17 @@ public class FirewallPolicyCollectionService {
             // 정책 비교 및 갱신
             updatePolicies(server, rules, unlimitedPolicies);
             
-            // 작업 로그 기록 (성공)
-            operationLogService.logOperation(
-                    "SYSTEM",
-                    "127.0.0.1",
-                    true,
-                    "서버: " + server.getName() + ", 정책 수: " + rules.size(),
-                    "정책관리",
-                    "서버 정책 수집 성공"
-            );
+            // // 작업 로그 기록 (성공)
+            // operationLogService.logOperation(
+            //         "SYSTEM",
+            //         "127.0.0.1",
+            //         true,
+            //         "서버: " + server.getName() + ", 정책 수: " + rules.size(),
+            //         "정책관리",
+            //         "서버 정책 수집 성공"
+            // );
             
-            log.info("서버 {}에서 방화벽 정책 수집 완료", server.getName());
+            log.debug("서버 {}에서 방화벽 정책 수집 완료", server.getName());
         } catch (Exception e) {
             log.error("서버 {}에서 방화벽 정책 수집 중 오류 발생: {}", server.getName(), e.getMessage(), e);
             throw e;
@@ -293,7 +293,7 @@ public class FirewallPolicyCollectionService {
     private void updatePolicies(ServerObject server, 
                                List<FirewallRulesResponse.FirewallRule> firewallRules, 
                                List<Policy> dbPolicies) {
-        log.info("서버 {}의 방화벽 정책 비교 및 갱신 시작", server.getName());
+        log.debug("서버 {}의 방화벽 정책 비교 및 갱신 시작", server.getName());
         
         // DB에 있는 정책 중 방화벽에 없는 정책 식별
         List<Policy> policiesToDelete = new ArrayList<>(dbPolicies);
@@ -407,14 +407,14 @@ public class FirewallPolicyCollectionService {
                 policyRepository.save(newPolicy);
             }
         }
-        
+    
         // 방화벽에 없는 정책 삭제
         if (!policiesToDelete.isEmpty()) {
-            log.info("서버 {}에서 {}개의 정책 삭제", server.getName(), policiesToDelete.size());
             policyRepository.deleteAll(policiesToDelete);
+            log.info("서버 {}에서 {}개의 정책 삭제", server.getName(), policiesToDelete.size());    
         }
         
-        log.info("서버 {}의 방화벽 정책 비교 및 갱신 완료", server.getName());
+        log.debug("서버 {}의 방화벽 정책 비교 및 갱신 완료", server.getName());
     }
     
     /**
