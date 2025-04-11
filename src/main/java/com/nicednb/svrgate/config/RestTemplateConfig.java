@@ -20,9 +20,11 @@ public class RestTemplateConfig {
     public RestTemplate restTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         
-        // 타임아웃 설정
-        factory.setConnectTimeout((int) Duration.ofSeconds(10).toMillis());
-        factory.setReadTimeout((int) Duration.ofSeconds(30).toMillis());
+        // Connection timeout 설정 (10초)
+        factory.setConnectTimeout(3_000);
+        
+        // Read timeout 설정 (30초)
+        factory.setReadTimeout(3_000);
         
         // RestTemplate 생성
         RestTemplate restTemplate = new RestTemplate(factory);

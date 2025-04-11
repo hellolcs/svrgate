@@ -178,16 +178,6 @@ public class FirewallPolicyCollectionService {
             // 정책 비교 및 갱신
             updatePolicies(server, rules, unlimitedPolicies);
 
-            // // 작업 로그 기록 (성공)
-            // operationLogService.logOperation(
-            // "SYSTEM",
-            // "127.0.0.1",
-            // true,
-            // "서버: " + server.getName() + ", 정책 수: " + rules.size(),
-            // "정책관리",
-            // "서버 정책 수집 성공"
-            // );
-
             log.debug("서버 {}에서 방화벽 정책 수집 완료", server.getName());
         } catch (Exception e) {
             // log.error("서버 {}에서 방화벽 정책 수집 중 오류 발생: {}", server.getName(), e.getMessage(),
